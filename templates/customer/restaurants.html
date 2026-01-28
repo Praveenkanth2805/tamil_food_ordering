@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %} - Restaurants{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">தமிழ்நாட்டு உணவகங்கள்</h2>
+        <p class="text-muted">Discover authentic Tamil Nadu restaurants</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('customer_restaurants') }}" class="row g-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" name="search" placeholder="Search restaurants..." 
+                                   value="{{ search if search else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <select class="form-control" name="category_id">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" 
+                                    {% if selected_category == category.id|string %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% if restaurants %}
+        {% for restaurant in restaurants %}
+        <div class="col-md-4 mb-4">
+            <div class="card food-card h-100">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div style="width: 100px; height: 100px; margin: 0 auto; background: #f0f0f0; 
+                                  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                                  font-size: 2.5rem; color: #FF6B35;">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                    </div>
+                    
+                    <h5 class="card-title text-center">{{ restaurant.restaurant_name }}</h5>
+                    
+                    {% if restaurant.avg_rating %}
+                    <div class="text-center mb-2">
+                        {% for i in range(5) %}
+                            {% if i < restaurant.avg_rating|round|int %}
+                                <i class="fas fa-star text-warning"></i>
+                            {% else %}
+                                <i class="far fa-star text-muted"></i>
+                            {% endif %}
+                        {% endfor %}
+                        <span class="ms-2">({{ "%.1f"|format(restaurant.avg_rating) }})</span>
+                    </div>
+                    {% endif %}
+                    
+                    <p class="card-text text-muted text-center mb-3">
+                        <i class="fas fa-map-marker-alt"></i> {{ restaurant.restaurant_address|truncate(50) }}
+                    </p>
+                    
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="text-primary">
+                                <i class="fas fa-utensil-spoon"></i>
+                            </div>
+                            <small>{{ restaurant.menu_items }} Items</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-success">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <small>{{ restaurant.restaurant_phone }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}" 
+                           class="btn btn-primary">
+                            <i class="fas fa-eye"></i> View Menu
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                        <i class="fas fa-store-slash"></i>
+                    </div>
+                    <h4>No restaurants found</h4>
+                    <p class="text-muted">Try different search criteria</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

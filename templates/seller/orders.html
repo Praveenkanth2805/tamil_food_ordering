@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %} - Seller Orders{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">ஆர்டர்கள் மேலாண்மை</h2>
+        <p class="text-muted">Manage and track customer orders</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('seller_orders') }}" 
+                       class="btn {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        All Orders
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}?status=pending" 
+                       class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Pending
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}?status=confirmed" 
+                       class="btn {% if status_filter == 'confirmed' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Confirmed
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}?status=preparing" 
+                       class="btn {% if status_filter == 'preparing' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Preparing
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}?status=ready" 
+                       class="btn {% if status_filter == 'ready' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Ready
+                    </a>
+                    <a href="{{ url_for('seller_orders') }}?status=delivered" 
+                       class="btn {% if status_filter == 'delivered' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Delivered
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Order Time</th>
+                                <th>Delivery Agent</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td>
+                                    <strong>{{ order.order_number }}</strong><br>
+                                    <small class="text-muted">{{ order.payment_method|replace('_', ' ')|title }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ order.customer_name }}</strong><br>
+                                    <small class="text-muted">{{ order.customer_phone }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ order.total_items or 0 }} items</span>
+                                </td>
+                                <td>
+                                    <strong>₹{{ order.final_amount }}</strong><br>
+                                    <small class="text-muted">₹{{ order.total_amount }} + ₹{{ order.delivery_charge }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge status-{{ order.order_status.replace(' ', '_') }}">
+                                        {{ order.order_status|title }}
+                                    </span>
+                                </td>
+                                <td>{{ order.created_at.strftime('%H:%M') }}<br>
+                                    <small>{{ order.created_at.strftime('%d/%m') }}</small>
+                                </td>
+                                <td>
+                                    {% if order.delivery_agent_name %}
+                                    {{ order.delivery_agent_name }}<br>
+                                    <small class="text-muted">{{ order.delivery_agent_phone }}</small>
+                                    {% else %}
+                                    <span class="badge bg-warning">Not Assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('seller_order_detail', order_id=order.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if order.order_status == 'pending' %}
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="updateOrderStatus({{ order.id }}, 'confirmed')">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        {% elif order.order_status == 'confirmed' %}
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                onclick="updateOrderStatus({{ order.id }}, 'preparing')">
+                                            <i class="fas fa-utensils"></i>
+                                        </button>
+                                        {% elif order.order_status == 'preparing' %}
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="updateOrderStatus({{ order.id }}, 'ready')">
+                                            <i class="fas fa-box"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <h4>No orders found</h4>
+                    <p class="text-muted">
+                        {% if status_filter %}
+                            No {{ status_filter }} orders
+                        {% else %}
+                            You don't have any orders yet
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateOrderStatus(orderId, status) {
+    let statusText = '';
+    switch(status) {
+        case 'confirmed': statusText = 'confirm'; break;
+        case 'preparing': statusText = 'start preparing'; break;
+        case 'ready': statusText = 'mark as ready'; break;
+        default: statusText = 'update';
+    }
+    
+    if(confirm(`Are you sure you want to ${statusText} this order?`)) {
+        $.ajax({
+            url: '/seller/update_order_status',
+            method: 'POST',
+            data: {
+                order_id: orderId,
+                status: status,
+                notes: `Order ${statusText}ed by restaurant`
+            },
+            success: function(response) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

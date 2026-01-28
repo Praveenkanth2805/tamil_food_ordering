@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %} - Home{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5 mb-5" style="background: linear-gradient(135deg, #FF6B35, #F4A261); border-radius: 20px;">
+    <div class="container">
+        <h1 class="display-4 fw-bold text-white mb-4 tamil-title">வணக்கம்! சுவையான தமிழ் உணவுகள்</h1>
+        <p class="lead text-white mb-4">Authentic Tamil Nadu cuisine delivered to your doorstep</p>
+        {% if 'user_id' not in session %}
+            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-5" style="color: #FF6B35;">
+                <i class="fas fa-utensils"></i> Order Now
+            </a>
+        {% else %}
+            {% if session.user_type == 'customer' %}
+                <a href="{{ url_for('customer_restaurants') }}" class="btn btn-light btn-lg px-5" style="color: #FF6B35;">
+                    <i class="fas fa-store"></i> Browse Restaurants
+                </a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-4 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-user-friends"></i>
+            </div>
+            <h3 class="stat-number">Customers</h3>
+            <p class="stat-label">Order delicious Tamil food</p>
+            <a href="{{ url_for('register') if 'user_id' not in session else '#' }}" 
+               class="btn btn-outline-primary">Join as Customer</a>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-store"></i>
+            </div>
+            <h3 class="stat-number">Restaurants</h3>
+            <p class="stat-label">Sell your authentic dishes</p>
+            <a href="{{ url_for('register') if 'user_id' not in session else '#' }}" 
+               class="btn btn-outline-primary">Join as Seller</a>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-motorcycle"></i>
+            </div>
+            <h3 class="stat-number">Delivery Partners</h3>
+            <p class="stat-label">Earn by delivering food</p>
+            <a href="{{ url_for('register') if 'user_id' not in session else '#' }}" 
+               class="btn btn-outline-primary">Join as Delivery</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="fas fa-star"></i> Popular Tamil Dishes</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="text-center">
+                            <div class="mb-2" style="font-size: 2rem; color: #FF6B35;">
+                                <i class="fas fa-bowl-rice"></i>
+                            </div>
+                            <h6>சாதம்</h6>
+                            <small>Traditional Rice</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="text-center">
+                            <div class="mb-2" style="font-size: 2rem; color: #FF6B35;">
+                                <i class="fas fa-pancakes"></i>
+                            </div>
+                            <h6>தோசை</h6>
+                            <small>Crispy Dosa</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="text-center">
+                            <div class="mb-2" style="font-size: 2rem; color: #FF6B35;">
+                                <i class="fas fa-drumstick-bite"></i>
+                            </div>
+                            <h6>சிக்கன் பிரியாணி</h6>
+                            <small>Chicken Biryani</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="text-center">
+                            <div class="mb-2" style="font-size: 2rem; color: #FF6B35;">
+                                <i class="fas fa-ice-cream"></i>
+                            </div>
+                            <h6>பால்கோவா</h6>
+                            <small>Traditional Sweet</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

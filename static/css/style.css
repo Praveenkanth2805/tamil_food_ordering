@@ -1,0 +1,341 @@
+/* Tamil Food Ordering System - Main CSS */
+
+:root {
+    --primary-color: #FF6B35;
+    --secondary-color: #F7C59F;
+    --accent-color: #2A9D8F;
+    --dark-color: #264653;
+    --light-color: #E9C46A;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --light-gray: #f8f9fa;
+    --dark-gray: #343a40;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    color: #333;
+    min-height: 100vh;
+}
+
+/* Navbar */
+.navbar {
+    background: linear-gradient(135deg, var(--dark-color), var(--accent-color));
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: white !important;
+}
+
+.navbar-brand span {
+    color: var(--light-color);
+}
+
+.nav-link {
+    color: rgba(255,255,255,0.9) !important;
+    font-weight: 500;
+    margin: 0 5px;
+    transition: color 0.3s;
+}
+
+.nav-link:hover {
+    color: var(--light-color) !important;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s, box-shadow 0.3s;
+    margin-bottom: 20px;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--light-color));
+    color: white;
+    border-radius: 15px 15px 0 0 !important;
+    border: none;
+    font-weight: 600;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), #FF8C42);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #FF8C42, var(--primary-color));
+    transform: scale(1.05);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--accent-color), #4ECDC4);
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, var(--light-color), #F4A261);
+    border: none;
+    color: var(--dark-color);
+}
+
+/* Forms */
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e0e0e0;
+    padding: 10px 15px;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+/* Badges */
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.status-pending { background-color: var(--warning-color); color: var(--dark-color); }
+.status-confirmed { background-color: var(--info-color); color: white; }
+.status-preparing { background-color: #6f42c1; color: white; }
+.status-ready { background-color: #20c997; color: white; }
+.status-picked_up { background-color: #fd7e14; color: white; }
+.status-on_the_way { background-color: var(--primary-color); color: white; }
+.status-delivered { background-color: var(--success-color); color: white; }
+.status-cancelled { background-color: var(--danger-color); color: white; }
+
+/* Food Cards */
+.food-card {
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.food-card:hover {
+    transform: translateY(-5px);
+}
+
+.food-image {
+    height: 200px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.food-price {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.food-discount {
+    color: var(--danger-color);
+    text-decoration: line-through;
+    font-size: 0.9rem;
+}
+
+/* Order Tracking */
+.tracking-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 30px 0;
+}
+
+.tracking-steps::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.step {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    flex: 1;
+}
+
+.step-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.step.active .step-circle {
+    background: var(--primary-color);
+}
+
+.step.completed .step-circle {
+    background: var(--success-color);
+}
+
+/* Dashboard Stats */
+.stat-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--dark-color);
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+    
+    .food-card {
+        margin-bottom: 15px;
+    }
+    
+    .tracking-steps {
+        flex-wrap: wrap;
+    }
+    
+    .step {
+        flex: 0 0 33.33%;
+        margin-bottom: 20px;
+    }
+}
+
+/* Tamil Styling */
+.tamil-title {
+    font-family: 'Tamil MN', 'Latha', 'Koodam', sans-serif;
+    color: var(--dark-color);
+}
+
+.spice-level {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.spice-mild { background-color: #d4edda; color: #155724; }
+.spice-medium { background-color: #fff3cd; color: #856404; }
+.spice-hot { background-color: #f8d7da; color: #721c24; }
+.spice-extra_hot { background-color: #dc3545; color: white; }
+
+.veg-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.veg { background-color: #28a745; }
+.nonveg { background-color: #dc3545; }
+
+/* Alert Messages */
+.alert {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* Loading Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Footer */
+.footer {
+    background: var(--dark-color);
+    color: white;
+    padding: 30px 0;
+    margin-top: 50px;
+}
+
+.footer a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: var(--light-color);
+    text-decoration: underline;
+}

@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %} - Menu Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">மெனு மேலாண்மை</h2>
+                <p class="text-muted">Manage your restaurant menu</p>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                <i class="fas fa-plus"></i> Add New Item
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Menu Items -->
+<div class="row">
+    {% if menu_items %}
+        {% for item in menu_items %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if item.image %}
+                <img src="{{ url_for('static', filename=item.image) }}" class="card-img-top" alt="{{ item.name }}" 
+                     style="height: 200px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
+                     style="height: 200px;">
+                    <i class="fas fa-utensils" style="font-size: 3rem; color: #ddd;"></i>
+                </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="card-title">{{ item.name }}</h5>
+                            {% if item.category_name %}
+                            <span class="badge bg-info">{{ item.category_name }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-{% if item.is_available %}success{% else %}danger{% endif %}">
+                            {{ 'Available' if item.is_available else 'Unavailable' }}
+                        </span>
+                    </div>
+                    
+                    <p class="card-text text-muted small">{{ item.description|truncate(100) }}</p>
+                    
+                    <div class="mb-3">
+                        <span class="veg-indicator {% if item.is_vegetarian %}veg{% else %}nonveg{% endif %}"></span>
+                        <span class="spice-level spice-{{ item.spice_level }} ms-2">
+                            {{ item.spice_level|replace('_', ' ')|title }}
+                        </span>
+                        <span class="ms-2">
+                            <i class="fas fa-clock"></i> {{ item.preparation_time }} min
+                        </span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0 text-primary">₹{{ item.discount_price or item.price }}</h5>
+                            {% if item.discount_price %}
+                            <small class="text-muted"><s>₹{{ item.price }}</s></small>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editItemModal"
+                                    onclick="editItem(this)"
+                                    data-item='{{ {
+                                        "id": item.id,
+                                        "name": item.name,
+                                        "description": item.description,
+                                        "category_id": item.category_id,
+                                        "price": item.price,
+                                        "discount_price": item.discount_price,
+                                        "preparation_time": item.preparation_time,
+                                        "spice_level": item.spice_level,
+                                        "is_vegetarian": item.is_vegetarian,
+                                        "is_available": item.is_available,
+                                        "image": item.image
+                                    }|tojson }}'>
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="deleteItem({{ item.id }}, {{ item.name|tojson }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <h4>No menu items yet</h4>
+                <p class="text-muted">Add your first menu item to get started</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addItemModal">
+                    <i class="fas fa-plus"></i> Add First Item
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Menu Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_menu_item') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Item Name *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-control" name="category_id">
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Price (₹) *</label>
+                            <input type="number" class="form-control" name="price" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Discount Price (₹)</label>
+                            <input type="number" class="form-control" name="discount_price" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Preparation Time (minutes) *</label>
+                            <input type="number" class="form-control" name="preparation_time" min="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Spice Level</label>
+                            <select class="form-control" name="spice_level">
+                                <option value="mild">Mild</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hot">Hot</option>
+                                <option value="extra_hot">Extra Hot</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_vegetarian" id="isVegetarian" checked>
+                                <label class="form-check-label" for="isVegetarian">
+                                    Vegetarian Item
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_available" id="isAvailable" checked>
+                                <label class="form-check-label" for="isAvailable">
+                                    Available for Order
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Item Image</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Menu Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_menu_item') }}" enctype="multipart/form-data" id="editItemForm">
+                <input type="hidden" name="item_id" id="editItemId">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Item Name *</label>
+                            <input type="text" class="form-control" name="name" id="editName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-control" name="category_id" id="editCategoryId">
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" id="editDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Price (₹) *</label>
+                            <input type="number" class="form-control" name="price" id="editPrice" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Discount Price (₹)</label>
+                            <input type="number" class="form-control" name="discount_price" id="editDiscountPrice" step="0.01" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Preparation Time (minutes) *</label>
+                            <input type="number" class="form-control" name="preparation_time" id="editPreparationTime" min="1" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Spice Level</label>
+                            <select class="form-control" name="spice_level" id="editSpiceLevel">
+                                <option value="mild">Mild</option>
+                                <option value="medium">Medium</option>
+                                <option value="hot">Hot</option>
+                                <option value="extra_hot">Extra Hot</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_vegetarian" id="editIsVegetarian">
+                                <label class="form-check-label" for="editIsVegetarian">
+                                    Vegetarian Item
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_available" id="editIsAvailable">
+                                <label class="form-check-label" for="editIsAvailable">
+                                    Available for Order
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Item Image</label>
+                        <input type="file" class="form-control" name="image" accept="image/*">
+                        <small class="text-muted">Leave empty to keep current image</small>
+                    </div>
+                    
+                    <div id="currentImage" class="mb-3" style="display: none;">
+                        <label class="form-label">Current Image</label>
+                        <div id="imagePreview" class="border p-2 text-center">
+                            <!-- Image preview will be shown here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editItem(button) {
+    // Get data from button's data attribute
+    const itemData = JSON.parse(button.getAttribute('data-item'));
+    
+    // Fill form with item data
+    document.getElementById('editItemId').value = itemData.id;
+    document.getElementById('editName').value = itemData.name;
+    document.getElementById('editDescription').value = itemData.description || '';
+    document.getElementById('editCategoryId').value = itemData.category_id || '';
+    document.getElementById('editPrice').value = itemData.price;
+    document.getElementById('editDiscountPrice').value = itemData.discount_price || '';
+    document.getElementById('editPreparationTime').value = itemData.preparation_time;
+    document.getElementById('editSpiceLevel').value = itemData.spice_level;
+    document.getElementById('editIsVegetarian').checked = itemData.is_vegetarian;
+    document.getElementById('editIsAvailable').checked = itemData.is_available;
+    
+    // Show current image if exists
+    const imagePreview = document.getElementById('imagePreview');
+    const currentImage = document.getElementById('currentImage');
+    
+    if (itemData.image) {
+        imagePreview.innerHTML = `
+            <img src="/static/${itemData.image}" style="max-width: 200px; max-height: 150px;" 
+                 class="img-thumbnail" alt="Current image">
+            <p class="mt-2"><small>Current image - will be kept if no new image is selected</small></p>
+        `;
+        currentImage.style.display = 'block';
+    } else {
+        imagePreview.innerHTML = '<p class="text-muted">No image uploaded</p>';
+        currentImage.style.display = 'block';
+    }
+}
+
+function deleteItem(itemId, itemName) {
+    if (confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+        $.ajax({
+            url: '/seller/delete_menu_item',
+            method: 'POST',
+            data: {
+                item_id: itemId
+            },
+            success: function(response) {
+                location.reload();
+            },
+            error: function() {
+                alert('Error deleting item. Please try again.');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

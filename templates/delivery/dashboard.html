@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %} - Delivery Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">வணக்கம், {{ session.full_name }}!</h2>
+                <p class="text-muted">Delivery Agent Dashboard</p>
+            </div>
+            <div>
+                <form method="POST" action="{{ url_for('update_availability') }}" class="d-inline">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-toggle-on"></i> Available
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('update_availability') }}" class="d-inline">
+                    <input type="hidden" name="is_available" value="false">
+                    <button type="submit" class="btn btn-danger ms-2">
+                        <i class="fas fa-toggle-off"></i> Unavailable
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #FF6B35;">
+                <i class="fas fa-motorcycle"></i>
+            </div>
+            <h2 class="stat-number">{{ active_orders|length }}</h2>
+            <p class="stat-label">Active Deliveries</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #2A9D8F;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="stat-number">{{ today_stats.total_deliveries or 0 }}</h2>
+            <p class="stat-label">Today's Deliveries</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #E9C46A;">
+                <i class="fas fa-rupee-sign"></i>
+            </div>
+            <h2 class="stat-number">₹{{ today_stats.total_value or 0 }}</h2>
+            <p class="stat-label">Today's Earnings</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #264653;">
+                <i class="fas fa-clock"></i>
+            </div>
+            <h2 class="stat-number">{{ today_stats.avg_delivery_time|round|int if today_stats.avg_delivery_time else 0 }}</h2>
+            <p class="stat-label">Avg Delivery Time (min)</p>
+        </div>
+    </div>
+</div>
+
+<!-- Active Deliveries -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-road"></i> Active Deliveries</h5>
+                <span class="badge bg-primary">{{ active_orders|length }} active</span>
+            </div>
+            <div class="card-body">
+                {% if active_orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Restaurant</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in active_orders %}
+                            <tr>
+                                <td>
+                                    <strong>{{ order.order_number }}</strong><br>
+                                    <small class="text-muted">COD: ₹{{ order.final_amount }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ order.restaurant_name }}</strong><br>
+                                    <small class="text-muted">{{ order.restaurant_address|truncate(20) }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ order.customer_name }}</strong><br>
+                                    <small class="text-muted">{{ order.customer_address|truncate(20) }}</small>
+                                </td>
+                                <td>₹{{ order.final_amount }}</td>
+                                <td>
+                                    <span class="badge status-{{ order.order_status.replace(' ', '_') }}">
+                                        {{ order.order_status|title }}
+                                    </span>
+                                </td>
+                                <td>{{ order.created_at.strftime('%H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('delivery_order_detail', order_id=order.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if order.order_status == 'ready' %}
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="updateDeliveryStatus({{ order.id }}, 'picked_up')">
+                                            <i class="fas fa-box"></i>
+                                        </button>
+                                        {% elif order.order_status == 'picked_up' %}
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                onclick="updateDeliveryStatus({{ order.id }}, 'on_the_way')">
+                                            <i class="fas fa-road"></i>
+                                        </button>
+                                        {% elif order.order_status == 'on_the_way' %}
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="updateDeliveryStatus({{ order.id }}, 'delivered')">
+                                            <i class="fas fa-home"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                        <i class="fas fa-motorcycle"></i>
+                    </div>
+                    <h4>No active deliveries</h4>
+                    <p class="text-muted">You don't have any active deliveries at the moment</p>
+                    <div class="mt-3">
+                        <button class="btn btn-primary" onclick="refreshOrders()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('delivery_orders') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-clipboard-list"></i> View All Orders
+                    </a>
+                    <a href="{{ url_for('delivery_history') }}" class="btn btn-outline-success">
+                        <i class="fas fa-history"></i> Delivery History
+                    </a>
+                    <button class="btn btn-outline-info" onclick="updateLocation()">
+                        <i class="fas fa-map-marker-alt"></i> Update Location
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="showEarnings()">
+                        <i class="fas fa-rupee-sign"></i> View Earnings
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delivery Tips -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Delivery Tips</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <small>
+                            <i class="fas fa-check text-success"></i>
+                            Always confirm the order before pickup
+                        </small>
+                    </div>
+                    <div class="list-group-item">
+                        <small>
+                            <i class="fas fa-check text-success"></i>
+                            Check for special instructions
+                        </small>
+                    </div>
+                    <div class="list-group-item">
+                        <small>
+                            <i class="fas fa-check text-success"></i>
+                            Handle food packages carefully
+                        </small>
+                    </div>
+                    <div class="list-group-item">
+                        <small>
+                            <i class="fas fa-check text-success"></i>
+                            Update status regularly
+                        </small>
+                    </div>
+                    <div class="list-group-item">
+                        <small>
+                            <i class="fas fa-check text-success"></i>
+                            Collect payment before delivery
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Location -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marked-alt"></i> Live Location Tracking</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> How it works</h6>
+                            <small class="text-muted">
+                                Your location is updated automatically when you change order status.
+                                Customers can track your live location during delivery.
+                            </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Current Location</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="currentLocation" 
+                                       placeholder="Getting location..." readonly>
+                                <button class="btn btn-outline-primary" type="button" onclick="getLocation()">
+                                    <i class="fas fa-crosshairs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button class="btn btn-primary" onclick="shareLocation()">
+                                <i class="fas fa-share-alt"></i> Share Live Location
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <!-- Map placeholder -->
+                        <div style="height: 300px; background: #f5f5f5; border-radius: 10px; 
+                                  display: flex; align-items: center; justify-content: center;">
+                            <div class="text-center">
+                                <div class="mb-3" style="font-size: 3rem; color: #ccc;">
+                                    <i class="fas fa-map"></i>
+                                </div>
+                                <h5>Delivery Map</h5>
+                                <p class="text-muted">Interactive map will be displayed here</p>
+                                <small class="text-muted">(Integration with Google Maps)</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Delivery Route -->
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6>Delivery Route</h6>
+                                    <small class="text-muted">Restaurant → Customer</small>
+                                </div>
+                                <span class="badge bg-info">Estimated: 20 mins</span>
+                            </div>
+                            <div class="progress mt-2" style="height: 10px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     style="width: 50%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small>Restaurant</small>
+                                <small>Customer</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateDeliveryStatus(orderId, status) {
+    let statusText = '';
+    switch(status) {
+        case 'picked_up': statusText = 'pick up'; break;
+        case 'on_the_way': statusText = 'mark as on the way'; break;
+        case 'delivered': statusText = 'mark as delivered'; break;
+        default: statusText = 'update';
+    }
+    
+    if(confirm(`Are you sure you want to ${statusText} this order?`)) {
+        // Get current location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    submitStatusUpdate(orderId, status, position);
+                },
+                function(error) {
+                    // Continue without location if user denies
+                    submitStatusUpdate(orderId, status, null);
+                }
+            );
+        } else {
+            submitStatusUpdate(orderId, status, null);
+        }
+    }
+}
+
+function submitStatusUpdate(orderId, status, position) {
+    const data = {
+        order_id: orderId,
+        status: status,
+        notes: `Order ${status.replace('_', ' ')} by delivery agent`
+    };
+    
+    if (position) {
+        data.latitude = position.coords.latitude;
+        data.longitude = position.coords.longitude;
+    }
+    
+    $.ajax({
+        url: '/delivery/update_order_status',
+        method: 'POST',
+        data: data,
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                // Reverse geocode to get address (simulated)
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                document.getElementById('currentLocation').value = 
+                    `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+                
+                showNotification('Location updated successfully!', 'success');
+            },
+            function(error) {
+                showNotification('Unable to get location. Please enable GPS.', 'danger');
+            }
+        );
+    } else {
+        showNotification('Geolocation not supported by your browser', 'danger');
+    }
+}
+
+function shareLocation() {
+    if (confirm('Share your live location with customers?')) {
+        showNotification('Live location sharing enabled', 'success');
+    }
+}
+
+function updateLocation() {
+    getLocation();
+}
+
+function showEarnings() {
+    alert('Earnings report will be available at the end of the day');
+}
+
+function refreshOrders() {
+    location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %} - {{ restaurant.restaurant_name }} Menu{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-2 text-center">
+                        <div style="width: 80px; height: 80px; margin: 0 auto; background: #f0f0f0; 
+                                  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                                  font-size: 2rem; color: #FF6B35;">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h3 class="tamil-title mb-1">{{ restaurant.restaurant_name }}</h3>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-map-marker-alt"></i> {{ restaurant.restaurant_address }}
+                        </p>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-phone"></i> {{ restaurant.restaurant_phone }}
+                        </p>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('view_cart') }}" class="btn btn-warning">
+                                <i class="fas fa-shopping-cart"></i> View Cart ({{ cart_items|length }})
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-filter"></i> Filters</h6>
+            </div>
+            <div class="card-body">
+                <h6>Categories</h6>
+                <div class="list-group list-group-flush mb-3">
+                    <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}" 
+                       class="list-group-item list-group-item-action {% if not selected_category %}active{% endif %}">
+                        All Items
+                    </a>
+                    {% for category in categories %}
+                    <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}?category_id={{ category.id }}" 
+                       class="list-group-item list-group-item-action {% if selected_category == category.id|string %}active{% endif %}">
+                        {{ category.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                
+                <h6>Food Type</h6>
+                <div class="list-group list-group-flush">
+                    <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}?{% if selected_category %}category_id={{ selected_category }}&{% endif %}vegetarian=veg" 
+                       class="list-group-item list-group-item-action {% if selected_vegetarian == 'veg' %}active{% endif %}">
+                        <span class="veg-indicator veg"></span> Vegetarian
+                    </a>
+                    <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}?{% if selected_category %}category_id={{ selected_category }}&{% endif %}vegetarian=nonveg" 
+                       class="list-group-item list-group-item-action {% if selected_vegetarian == 'nonveg' %}active{% endif %}">
+                        <span class="veg-indicator nonveg"></span> Non-Vegetarian
+                    </a>
+                    <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}{% if selected_category %}?category_id={{ selected_category }}{% endif %}" 
+                       class="list-group-item list-group-item-action {% if not selected_vegetarian %}active{% endif %}">
+                        All Types
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        {% if menu_items %}
+            <div class="row">
+                {% for item in menu_items %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-3">
+                                    {% if item.image %}
+                                    <img src="{{ url_for('static', filename=item.image) }}" 
+                                         class="img-fluid rounded" alt="{{ item.name }}">
+                                    {% else %}
+                                    <div class="text-center" style="color: #ddd; font-size: 2rem;">
+                                        <i class="fas fa-utensils"></i>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-9">
+                                    <h5 class="card-title">{{ item.name }}</h5>
+                                    <p class="card-text text-muted small">{{ item.description|truncate(60) }}</p>
+                                    
+                                    <div class="mb-2">
+                                        <span class="veg-indicator {% if item.is_vegetarian %}veg{% else %}nonveg{% endif %}"></span>
+                                        <span class="spice-level spice-{{ item.spice_level }}">
+                                            {{ item.spice_level|replace('_', ' ')|title }}
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="food-price">₹{{ item.discount_price or item.price }}</span>
+                                            {% if item.discount_price %}
+                                            <span class="food-discount ms-2">₹{{ item.price }}</span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        {% set in_cart = false %}
+                                        {% set cart_item_id = 0 %}
+                                        {% set cart_quantity = 0 %}
+                                        {% for cart_item in cart_items %}
+                                            {% if cart_item.food_item_id == item.id %}
+                                                {% set in_cart = true %}
+                                                {% set cart_item_id = cart_item.id %}
+                                                {% set cart_quantity = cart_item.quantity %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if in_cart %}
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    onclick="updateCart({{ cart_item_id }}, {{ cart_quantity - 1 }})">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-primary" disabled>
+                                                {{ cart_quantity }}
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    onclick="updateCart({{ cart_item_id }}, {{ cart_quantity + 1 }})">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        {% else %}
+                                        <form method="POST" action="{{ url_for('add_to_cart') }}" class="add-to-cart-form">
+                                            <input type="hidden" name="food_item_id" value="{{ item.id }}">
+                                            <input type="hidden" name="quantity" value="1">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-cart-plus"></i> Add
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                        <i class="fas fa-utensil-spoon"></i>
+                    </div>
+                    <h4>No menu items found</h4>
+                    <p class="text-muted">Try different filters</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateCart(cartId, quantity) {
+    if(quantity <= 0) {
+        if(confirm('Remove item from cart?')) {
+            submitCartUpdate(cartId, 0);
+        }
+    } else {
+        submitCartUpdate(cartId, quantity);
+    }
+}
+
+function submitCartUpdate(cartId, quantity) {
+    $.ajax({
+        url: '/customer/update_cart',
+        method: 'POST',
+        data: {
+            cart_id: cartId,
+            quantity: quantity
+        },
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+
+// Add to cart with AJAX
+$('.add-to-cart-form').submit(function(e) {
+    e.preventDefault();
+    var form = $(this);
+    
+    $.ajax({
+        url: form.attr('action'),
+        method: 'POST',
+        data: form.serialize(),
+        success: function(response) {
+            location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}

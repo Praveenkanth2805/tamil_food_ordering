@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %} - Order #{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">Order #{{ order.order_number }}</h2>
+                <p class="text-muted">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            </div>
+            <span class="badge status-{{ order.order_status.replace(' ', '_') }} fs-6 px-3 py-2">
+                {{ order.order_status|title }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-utensils"></i> Order Items</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.image %}
+                                        <img src="{{ url_for('static', filename=item.image) }}" 
+                                             class="img-thumbnail me-3" style="width: 50px; height: 50px;" 
+                                             alt="{{ item.name }}">
+                                        {% endif %}
+                                        <div>
+                                            <h6 class="mb-0">{{ item.name }}</h6>
+                                            {% if item.special_instructions %}
+                                            <small class="text-muted">{{ item.special_instructions }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ item.quantity }}</td>
+                                <td>₹{{ item.discount_price or item.price }}</td>
+                                <td>₹{{ (item.discount_price or item.price) * item.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Order Tracking</h5>
+            </div>
+            <div class="card-body">
+                <div class="tracking-steps">
+                    <div class="step {% if 'pending' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'pending' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <small>Order Placed</small>
+                    </div>
+                    
+                    <div class="step {% if 'confirmed' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'confirmed' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Confirmed</small>
+                    </div>
+                    
+                    <div class="step {% if 'preparing' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'preparing' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <small>Preparing</small>
+                    </div>
+                    
+                    <div class="step {% if 'ready' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'ready' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <small>Ready</small>
+                    </div>
+                    
+                    <div class="step {% if 'picked_up' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'picked_up' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <small>Picked Up</small>
+                    </div>
+                    
+                    <div class="step {% if 'on_the_way' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'on_the_way' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-road"></i>
+                        </div>
+                        <small>On the Way</small>
+                    </div>
+                    
+                    <div class="step {% if 'delivered' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'delivered' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <small>Delivered</small>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Tracking History</h6>
+                    <div class="list-group">
+                        {% for track in tracking %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ track.status|title }}</h6>
+                                <small>{{ track.created_at.strftime('%I:%M %p') }}</small>
+                            </div>
+                            {% if track.notes %}
+                            <p class="mb-1">{{ track.notes }}</p>
+                            {% endif %}
+                            <small>{{ track.created_at.strftime('%B %d, %Y') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Order Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Restaurant:</strong></p>
+                    <p class="mb-2">{{ order.restaurant_name }}</p>
+                    <p class="mb-1 text-muted">
+                        <i class="fas fa-phone"></i> {{ order.restaurant_phone }}
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Delivery Address:</strong></p>
+                    <p class="mb-2">{{ order.delivery_address }}</p>
+                </div>
+                
+                {% if order.delivery_agent_name %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Delivery Agent:</strong></p>
+                    <p class="mb-1">{{ order.delivery_agent_name }}</p>
+                    <p class="mb-0 text-muted">
+                        <i class="fas fa-phone"></i> {{ order.delivery_agent_phone }}
+                    </p>
+                </div>
+                {% endif %}
+                
+                {% if order.special_instructions %}
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Special Instructions:</strong></p>
+                    <p class="mb-0">{{ order.special_instructions }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Payment Method:</strong></p>
+                    <p class="mb-0">{{ order.payment_method|replace('_', ' ')|title }}</p>
+                    <p class="mb-0 text-muted">
+                        Status: <span class="text-{% if order.payment_status == 'completed' %}success{% elif order.payment_status == 'failed' %}danger{% else %}warning{% endif %}">
+                            {{ order.payment_status|title }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-receipt"></i> Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span>₹{{ order.total_amount }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Delivery Charge:</span>
+                    <span>₹{{ order.delivery_charge }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax:</span>
+                    <span>₹{{ order.tax_amount }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>Total Amount:</strong>
+                    <strong>₹{{ order.final_amount }}</strong>
+                </div>
+                
+                {% if order.order_status == 'delivered' %}
+                <div class="d-grid">
+                    <button class="btn btn-success" onclick="rateOrder()">
+                        <i class="fas fa-star"></i> Rate Order
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function rateOrder() {
+    alert('Rating feature will be implemented soon!');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %} - Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+.analytics-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">பகுப்பாய்வு மற்றும் அறிக்கைகள்</h2>
+        <p class="text-muted">Sales analytics and performance reports</p>
+    </div>
+</div>
+
+<!-- Period Selector -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('seller_analytics') }}?period=day" 
+                       class="btn {% if period == 'day' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Today
+                    </a>
+                    <a href="{{ url_for('seller_analytics') }}?period=week" 
+                       class="btn {% if period == 'week' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Last 7 Days
+                    </a>
+                    <a href="{{ url_for('seller_analytics') }}?period=month" 
+                       class="btn {% if period == 'month' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Last 30 Days
+                    </a>
+                    <a href="{{ url_for('seller_analytics') }}?period=year" 
+                       class="btn {% if period == 'year' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Last 365 Days
+                    </a>
+                </div>
+                
+                <div class="btn-group ms-3" role="group">
+                    <a href="{{ url_for('seller_analytics') }}?period={{ period }}&chart=revenue" 
+                       class="btn {% if chart_type == 'revenue' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        Revenue
+                    </a>
+                    <a href="{{ url_for('seller_analytics') }}?period={{ period }}&chart=orders" 
+                       class="btn {% if chart_type == 'orders' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        Orders
+                    </a>
+                    <a href="{{ url_for('seller_analytics') }}?period={{ period }}&chart=items" 
+                       class="btn {% if chart_type == 'items' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        Items
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="analytics-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">Total Revenue</h6>
+                    <h3 class="mt-2 mb-0">
+                        ₹{{ sales_data|sum(attribute='total_revenue')|default(0)|round|int }}
+                    </h3>
+                </div>
+                <div style="font-size: 2rem;">
+                    <i class="fas fa-rupee-sign"></i>
+                </div>
+            </div>
+            <small class="opacity-75">For selected period</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="analytics-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">Total Orders</h6>
+                    <h3 class="mt-2 mb-0">
+                        {{ sales_data|sum(attribute='order_count')|default(0) }}
+                    </h3>
+                </div>
+                <div style="font-size: 2rem;">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+            </div>
+            <small class="opacity-75">For selected period</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="analytics-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">Avg Order Value</h6>
+                    <h3 class="mt-2 mb-0">
+                        {% set total_revenue = sales_data|sum(attribute='total_revenue')|default(0) %}
+                        {% set total_orders = sales_data|sum(attribute='order_count')|default(1) %}
+                        ₹{{ (total_revenue/total_orders)|round|int if total_orders > 0 else 0 }}
+                    </h3>
+                </div>
+                <div style="font-size: 2rem;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <small class="opacity-75">For selected period</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="analytics-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">Success Rate</h6>
+                    <h3 class="mt-2 mb-0">
+                        {% set delivered_orders = status_distribution|selectattr('order_status', 'equalto', 'delivered')|list %}
+                        {% set total_orders = sales_data|sum(attribute='order_count')|default(1) %}
+                        {% if delivered_orders and delivered_orders[0].count %}
+                            {{ ((delivered_orders[0].count / total_orders) * 100)|round|int }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h3>
+                </div>
+                <div style="font-size: 2rem;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <small class="opacity-75">Delivery success rate</small>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-{{ 'line' if chart_type == 'revenue' else 'bar' }}"></i>
+                    {{ chart_type|title }} Analytics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Order Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Selling Items -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-fire"></i> Top Selling Items</h5>
+            </div>
+            <div class="card-body">
+                {% if top_items %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity Sold</th>
+                                <th>Revenue</th>
+                                <th>Orders</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.total_quantity }}</td>
+                                <td>₹{{ item.total_revenue|round|int }}</td>
+                                <td>{{ item.order_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted">No sales data available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock"></i> Performance Metrics</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Average Preparation Time</span>
+                            <strong>25 mins</strong>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Peak Order Hours</span>
+                            <strong>12:00 PM - 2:00 PM</strong>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Customer Satisfaction</span>
+                            <strong>4.5/5.0</strong>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Repeat Customers</span>
+                            <strong>65%</strong>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>Order Cancellation Rate</span>
+                            <strong>2%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Sales Chart
+const salesData = {{ sales_data|tojson }};
+const chartType = "{{ chart_type }}";
+
+const dates = salesData.map(item => item.date);
+const revenues = salesData.map(item => parseFloat(item.total_revenue || 0));
+const orders = salesData.map(item => parseInt(item.order_count || 0));
+const avgValues = salesData.map(item => parseFloat(item.avg_order_value || 0));
+
+const ctx = document.getElementById('salesChart').getContext('2d');
+const salesChart = new Chart(ctx, {
+    type: chartType === 'revenue' ? 'line' : 'bar',
+    data: {
+        labels: dates,
+        datasets: [{
+            label: chartType === 'revenue' ? 'Revenue (₹)' : 
+                   chartType === 'orders' ? 'Number of Orders' : 'Average Order Value (₹)',
+            data: chartType === 'revenue' ? revenues : 
+                  chartType === 'orders' ? orders : avgValues,
+            backgroundColor: chartType === 'revenue' ? 'rgba(255, 107, 53, 0.2)' : 
+                           chartType === 'orders' ? 'rgba(42, 157, 143, 0.2)' : 
+                           'rgba(233, 196, 106, 0.2)',
+            borderColor: chartType === 'revenue' ? 'rgb(255, 107, 53)' : 
+                        chartType === 'orders' ? 'rgb(42, 157, 143)' : 
+                        'rgb(233, 196, 106)',
+            borderWidth: 2,
+            fill: chartType === 'revenue'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return chartType === 'revenue' ? '₹' + value : 
+                               chartType === 'orders' ? value : '₹' + value;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Status Distribution Chart
+const statusData = {{ status_distribution|tojson }};
+const statusLabels = statusData.map(item => item.order_status.replace('_', ' ').toUpperCase());
+const statusCounts = statusData.map(item => item.count);
+
+const statusColors = {
+    'PENDING': '#FFC107',
+    'CONFIRMED': '#17A2B8',
+    'PREPARING': '#6F42C1',
+    'READY': '#20C997',
+    'PICKED UP': '#FD7E14',
+    'ON THE WAY': '#FF6B35',
+    'DELIVERED': '#28A745',
+    'CANCELLED': '#DC3545'
+};
+
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: statusLabels,
+        datasets: [{
+            data: statusCounts,
+            backgroundColor: statusLabels.map(label => statusColors[label] || '#6C757D'),
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

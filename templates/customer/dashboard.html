@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %} - Customer Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">வணக்கம், {{ session.full_name }}!</h2>
+        <p class="text-muted">Your food ordering dashboard</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #FF6B35;">
+                <i class="fas fa-utensils"></i>
+            </div>
+            <h3 class="stat-number">Order Food</h3>
+            <p class="stat-label">Browse Tamil restaurants</p>
+            <a href="{{ url_for('customer_restaurants') }}" class="btn btn-primary">
+                <i class="fas fa-store"></i> Order Now
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #2A9D8F;">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h3 class="stat-number">My Orders</h3>
+            <p class="stat-label">Track your orders</p>
+            <a href="{{ url_for('customer_orders') }}" class="btn btn-success">
+                <i class="fas fa-eye"></i> View Orders
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #E9C46A;">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h3 class="stat-number" id="cart-count-display">0</h3>
+            <p class="stat-label">Items in Cart</p>
+            <a href="{{ url_for('view_cart') }}" class="btn btn-warning">
+                <i class="fas fa-shopping-cart"></i> View Cart
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Orders</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_orders %}
+                    <div class="list-group">
+                        {% for order in recent_orders %}
+                        <a href="{{ url_for('customer_order_detail', order_id=order.id) }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ order.restaurant_name }}</h6>
+                                <small class="text-muted">{{ order.created_at.strftime('%b %d, %Y') }}</small>
+                            </div>
+                            <p class="mb-1">Order #{{ order.order_number }}</p>
+                            <div class="d-flex justify-content-between">
+                                <span>₹{{ order.final_amount }}</span>
+                                <span class="badge status-{{ order.order_status.replace(' ', '_') }}">
+                                    {{ order.order_status|title }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-3">No orders yet. Start ordering!</p>
+                {% endif %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('customer_orders') }}" class="btn btn-outline-primary btn-sm">
+                        View All Orders
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-star"></i> Top Restaurants</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for restaurant in restaurants %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card food-card">
+                            <div class="card-body text-center">
+                                <div class="mb-2" style="font-size: 2rem; color: #FF6B35;">
+                                    <i class="fas fa-utensils"></i>
+                                </div>
+                                <h6>{{ restaurant.restaurant_name }}</h6>
+                                {% if restaurant.avg_rating %}
+                                <div class="mb-2">
+                                    {% for i in range(5) %}
+                                        {% if i < restaurant.avg_rating|round|int %}
+                                            <i class="fas fa-star text-warning"></i>
+                                        {% else %}
+                                            <i class="far fa-star text-muted"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <small class="text-muted">({{ "%.1f"|format(restaurant.avg_rating) }})</small>
+                                </div>
+                                {% endif %}
+                                <a href="{{ url_for('customer_menu', seller_id=restaurant.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">View Menu</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('customer_restaurants') }}" class="btn btn-outline-primary btn-sm">
+                        Browse All Restaurants
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter"></i> Categories</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for category in categories %}
+                    <div class="col-md-2 col-4 mb-3">
+                        <a href="{{ url_for('customer_restaurants') }}?category_id={{ category.id }}" 
+                           class="text-decoration-none">
+                            <div class="text-center">
+                                <div class="mb-2" style="font-size: 1.5rem; color: #FF6B35;">
+                                    {% if loop.index == 1 %}
+                                        <i class="fas fa-leaf"></i>
+                                    {% elif loop.index == 2 %}
+                                        <i class="fas fa-drumstick-bite"></i>
+                                    {% elif loop.index == 3 %}
+                                        <i class="fas fa-cookie-bite"></i>
+                                    {% elif loop.index == 4 %}
+                                        <i class="fas fa-pancakes"></i>
+                                    {% elif loop.index == 5 %}
+                                        <i class="fas fa-bowl-rice"></i>
+                                    {% elif loop.index == 6 %}
+                                        <i class="fas fa-wine-glass-alt"></i>
+                                    {% else %}
+                                        <i class="fas fa-ice-cream"></i>
+                                    {% endif %}
+                                </div>
+                                <small class="text-dark">{{ category.name|truncate(15) }}</small>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update cart count on page load
+$(document).ready(function() {
+    $.ajax({
+        url: '/api/cart_count',
+        method: 'GET',
+        success: function(data) {
+            $('#cart-count').text(data.count);
+            $('#cart-count-display').text(data.count);
+        }
+    });
+});
+</script>
+{% endblock %}

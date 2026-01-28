@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %} - Order #{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">Order #{{ order.order_number }}</h2>
+                <p class="text-muted">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            </div>
+            <div>
+                <span class="badge status-{{ order.order_status.replace(' ', '_') }} fs-6 px-3 py-2">
+                    {{ order.order_status|title }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Order Details -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-shopping-bag"></i> Order Details</h5>
+            </div>
+            <div class="card-body">
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user"></i> Customer Information</h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-1"><strong>{{ order.customer_name }}</strong></p>
+                                <p class="mb-1"><i class="fas fa-phone"></i> {{ order.customer_phone }}</p>
+                                <p class="mb-0"><i class="fas fa-map-marker-alt"></i> {{ order.customer_address }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-info-circle"></i> Order Information</h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-1"><strong>Order Type:</strong> Delivery</p>
+                                <p class="mb-1"><strong>Payment:</strong> {{ order.payment_method|replace('_', ' ')|title }}</p>
+                                <p class="mb-0"><strong>Payment Status:</strong> 
+                                    <span class="badge bg-{% if order.payment_status == 'completed' %}success{% elif order.payment_status == 'failed' %}danger{% else %}warning{% endif %}">
+                                        {{ order.payment_status|title }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Items -->
+                <h6><i class="fas fa-utensils"></i> Order Items</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.image %}
+                                        <img src="{{ url_for('static', filename=item.image) }}" 
+                                             class="img-thumbnail me-3" style="width: 60px; height: 60px;" 
+                                             alt="{{ item.name }}">
+                                        {% endif %}
+                                        <div>
+                                            <h6 class="mb-0">{{ item.name }}</h6>
+                                            {% if item.special_instructions %}
+                                            <small class="text-muted">{{ item.special_instructions }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ item.quantity }}</td>
+                                <td>₹{{ item.price }}</td>
+                                <td>₹{{ item.price * item.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
+                                <td><strong>₹{{ order.total_amount }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Delivery Charge:</strong></td>
+                                <td><strong>₹{{ order.delivery_charge }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Tax:</strong></td>
+                                <td><strong>₹{{ order.tax_amount }}</strong></td>
+                            </tr>
+                            <tr class="table-active">
+                                <td colspan="3" class="text-end"><strong>Total Amount:</strong></td>
+                                <td><strong>₹{{ order.final_amount }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <!-- Special Instructions -->
+                {% if order.special_instructions %}
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-sticky-note"></i> Special Instructions</h6>
+                    <p class="mb-0">{{ order.special_instructions }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Order Tracking -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Order Tracking</h5>
+            </div>
+            <div class="card-body">
+                <div class="tracking-steps">
+                    <div class="step {% if 'pending' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'pending' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <small>Order Placed</small>
+                    </div>
+                    
+                    <div class="step {% if 'confirmed' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'confirmed' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <small>Confirmed</small>
+                    </div>
+                    
+                    <div class="step {% if 'preparing' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'preparing' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <small>Preparing</small>
+                    </div>
+                    
+                    <div class="step {% if 'ready' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'ready' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <small>Ready</small>
+                    </div>
+                    
+                    <div class="step {% if 'picked_up' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'picked_up' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <small>Picked Up</small>
+                    </div>
+                    
+                    <div class="step {% if 'on_the_way' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'on_the_way' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-road"></i>
+                        </div>
+                        <small>On the Way</small>
+                    </div>
+                    
+                    <div class="step {% if 'delivered' in [t.status for t in tracking] %}completed{% endif %} 
+                                {% if order.order_status == 'delivered' %}active{% endif %}">
+                        <div class="step-circle">
+                            <i class="fas fa-home"></i>
+                        </div>
+                        <small>Delivered</small>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Status History</h6>
+                    <div class="list-group">
+                        {% for track in tracking %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ track.status|title }}</h6>
+                                <small>{{ track.created_at.strftime('%I:%M %p') }}</small>
+                            </div>
+                            {% if track.notes %}
+                            <p class="mb-1">{{ track.notes }}</p>
+                            {% endif %}
+                            <small>{{ track.created_at.strftime('%B %d, %Y') }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions Panel -->
+    <div class="col-md-4">
+        <!-- Status Update -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sync-alt"></i> Update Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 mb-3">
+                    {% if order.order_status == 'pending' %}
+                    <button class="btn btn-success" onclick="updateOrderStatus('confirmed')">
+                        <i class="fas fa-check"></i> Confirm Order
+                    </button>
+                    {% elif order.order_status == 'confirmed' %}
+                    <button class="btn btn-warning" onclick="updateOrderStatus('preparing')">
+                        <i class="fas fa-utensils"></i> Start Preparing
+                    </button>
+                    {% elif order.order_status == 'preparing' %}
+                    <button class="btn btn-info" onclick="updateOrderStatus('ready')">
+                        <i class="fas fa-box"></i> Mark as Ready
+                    </button>
+                    {% elif order.order_status == 'ready' %}
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignDeliveryModal">
+                        <i class="fas fa-motorcycle"></i> Assign Delivery Agent
+                    </button>
+                    {% endif %}
+                </div>
+                
+                {% if order.order_status not in ['delivered', 'cancelled'] %}
+                <div class="mb-3">
+                    <label class="form-label">Add Note</label>
+                    <textarea class="form-control" id="statusNote" rows="2" 
+                              placeholder="Add notes about this order status update"></textarea>
+                </div>
+                {% endif %}
+                
+                {% if order.order_status == 'delivered' %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Order delivered successfully
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Delivery Agent -->
+        {% if order.delivery_agent_name %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-motorcycle"></i> Delivery Agent</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="mb-3" style="font-size: 3rem; color: #2A9D8F;">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h5>{{ order.delivery_agent_name }}</h5>
+                    <p class="text-muted">
+                        <i class="fas fa-phone"></i> {{ order.delivery_agent_phone }}
+                    </p>
+                    <button class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-phone"></i> Call Agent
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Order Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-file-invoice"></i> Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Number:</span>
+                    <strong>{{ order.order_number }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Date:</span>
+                    <span>{{ order.created_at.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Time:</span>
+                    <span>{{ order.created_at.strftime('%I:%M %p') }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span>₹{{ order.total_amount }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Delivery:</span>
+                    <span>₹{{ order.delivery_charge }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax:</span>
+                    <span>₹{{ order.tax_amount }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total:</strong>
+                    <strong>₹{{ order.final_amount }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Delivery Agent Modal -->
+<div class="modal fade" id="assignDeliveryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Delivery Agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('assign_delivery_agent') }}">
+                <input type="hidden" name="order_id" value="{{ order.id }}">
+                <div class="modal-body">
+                    {% if delivery_agents %}
+                    <div class="mb-3">
+                        <label class="form-label">Select Delivery Agent</label>
+                        <select class="form-control" name="delivery_agent_id" required>
+                            <option value="">Choose an agent</option>
+                            {% for agent in delivery_agents %}
+                            <option value="{{ agent.id }}">
+                                {{ agent.full_name }} - {{ agent.phone }}
+                                {% if agent.current_latitude and agent.current_longitude %}
+                                (Available)
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            Assigning a delivery agent will mark the order as ready for pickup.
+                        </small>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <div class="mb-3" style="font-size: 3rem; color: #ddd;">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <h5>No delivery agents available</h5>
+                        <p class="text-muted">Check back in a few minutes</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {% if delivery_agents %}
+                    <button type="submit" class="btn btn-primary">Assign Agent</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateOrderStatus(status) {
+    const note = document.getElementById('statusNote').value;
+    
+    $.ajax({
+        url: '/seller/update_order_status',
+        method: 'POST',
+        data: {
+            order_id: {{ order.id }},
+            status: status,
+            notes: note || `Order ${status} by restaurant`
+        },
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

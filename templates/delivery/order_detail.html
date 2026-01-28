@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %} - Delivery Order #{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">Delivery Order #{{ order.order_number }}</h2>
+                <p class="text-muted">{{ order.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+            </div>
+            <div>
+                <span class="badge status-{{ order.order_status.replace(' ', '_') }} fs-6 px-3 py-2">
+                    {{ order.order_status|title }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Order Information -->
+    <div class="col-md-8">
+        <!-- Delivery Route -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-route"></i> Delivery Route</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="fas fa-store text-primary"></i> Pickup From</h6>
+                                <p class="mb-1"><strong>{{ order.restaurant_name }}</strong></p>
+                                <p class="mb-1">{{ order.restaurant_address }}</p>
+                                <p class="mb-0"><i class="fas fa-phone"></i> {{ order.restaurant_phone }}</p>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="callNumber('{{ order.restaurant_phone }}')">
+                                        <i class="fas fa-phone"></i> Call Restaurant
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success ms-2" 
+                                            onclick="getDirections('{{ order.restaurant_address }}')">
+                                        <i class="fas fa-directions"></i> Directions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="fas fa-home text-success"></i> Deliver To</h6>
+                                <p class="mb-1"><strong>{{ order.customer_name }}</strong></p>
+                                <p class="mb-1">{{ order.customer_address }}</p>
+                                <p class="mb-0"><i class="fas fa-phone"></i> {{ order.customer_phone }}</p>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            onclick="callNumber('{{ order.customer_phone }}')">
+                                        <i class="fas fa-phone"></i> Call Customer
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success ms-2" 
+                                            onclick="getDirections('{{ order.customer_address }}')">
+                                        <i class="fas fa-directions"></i> Directions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Route Progress -->
+                <div class="mt-4">
+                    <h6>Delivery Progress</h6>
+                    <div class="tracking-steps">
+                        <div class="step {% if 'ready' in [t.status for t in tracking] %}completed{% endif %} 
+                                    {% if order.order_status == 'ready' %}active{% endif %}">
+                            <div class="step-circle">
+                                <i class="fas fa-box"></i>
+                            </div>
+                            <small>Ready</small>
+                        </div>
+                        
+                        <div class="step {% if 'picked_up' in [t.status for t in tracking] %}completed{% endif %} 
+                                    {% if order.order_status == 'picked_up' %}active{% endif %}">
+                            <div class="step-circle">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <small>Picked Up</small>
+                        </div>
+                        
+                        <div class="step {% if 'on_the_way' in [t.status for t in tracking] %}completed{% endif %} 
+                                    {% if order.order_status == 'on_the_way' %}active{% endif %}">
+                            <div class="step-circle">
+                                <i class="fas fa-road"></i>
+                            </div>
+                            <small>On the Way</small>
+                        </div>
+                        
+                        <div class="step {% if 'delivered' in [t.status for t in tracking] %}completed{% endif %} 
+                                    {% if order.order_status == 'delivered' %}active{% endif %}">
+                            <div class="step-circle">
+                                <i class="fas fa-home"></i>
+                            </div>
+                            <small>Delivered</small>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mt-3" style="height: 20px;">
+                        {% if order.order_status == 'ready' %}
+                        <div class="progress-bar" style="width: 25%">Ready for Pickup</div>
+                        {% elif order.order_status == 'picked_up' %}
+                        <div class="progress-bar" style="width: 50%">Picked Up</div>
+                        {% elif order.order_status == 'on_the_way' %}
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 75%">On the Way</div>
+                        {% elif order.order_status == 'delivered' %}
+                        <div class="progress-bar bg-success" style="width: 100%">Delivered</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Items -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-utensils"></i> Order Items</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>₹{{ item.price }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <td colspan="2" class="text-end"><strong>Total Amount to Collect:</strong></td>
+                                <td><strong>₹{{ order.final_amount }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Delivery History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Delivery History</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for track in tracking %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ track.status|title }}</h6>
+                            <small>{{ track.created_at.strftime('%I:%M %p') }}</small>
+                        </div>
+                        {% if track.notes %}
+                        <p class="mb-1">{{ track.notes }}</p>
+                        {% endif %}
+                        {% if track.location_latitude %}
+                        <small>
+                            <i class="fas fa-map-marker-alt"></i> 
+                            Location: {{ track.location_latitude|round(6) }}, {{ track.location_longitude|round(6) }}
+                        </small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions Panel -->
+    <div class="col-md-4">
+        <!-- Status Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tasks"></i> Delivery Actions</h5>
+            </div>
+            <div class="card-body">
+                {% if order.order_status == 'ready' %}
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-success btn-lg" onclick="updateOrderStatus('picked_up')">
+                        <i class="fas fa-box"></i> Mark as Picked Up
+                    </button>
+                    <small class="text-center text-muted">Confirm you have collected the order from restaurant</small>
+                </div>
+                
+                {% elif order.order_status == 'picked_up' %}
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-warning btn-lg" onclick="updateOrderStatus('on_the_way')">
+                        <i class="fas fa-road"></i> Start Delivery
+                    </button>
+                    <small class="text-center text-muted">Start delivery to customer location</small>
+                </div>
+                
+                {% elif order.order_status == 'on_the_way' %}
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-primary btn-lg" onclick="updateOrderStatus('delivered')">
+                        <i class="fas fa-home"></i> Mark as Delivered
+                    </button>
+                    <small class="text-center text-muted">Confirm delivery to customer</small>
+                </div>
+                
+                {% elif order.order_status == 'delivered' %}
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle"></i> Order Delivered</h5>
+                    <p class="mb-0">Order delivered successfully at {{ order.updated_at.strftime('%I:%M %p') }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Additional Actions -->
+                <div class="mt-3">
+                    <h6>Quick Actions</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="callCustomer()">
+                            <i class="fas fa-phone"></i> Call Customer
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="sendSMS()">
+                            <i class="fas fa-sms"></i> Send SMS
+                        </button>
+                        <button class="btn btn-outline-info" onclick="updateLocation()">
+                            <i class="fas fa-map-marker-alt"></i> Update My Location
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div class="mt-3">
+                    <label class="form-label">Add Delivery Note</label>
+                    <textarea class="form-control" id="deliveryNote" rows="3" 
+                              placeholder="Add any notes about the delivery"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-money-bill-wave"></i> Payment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="mb-3" style="font-size: 2.5rem; color: #28a745;">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <h3>₹{{ order.final_amount }}</h3>
+                    <p class="text-muted">Amount to Collect</p>
+                    
+                    <div class="alert alert-warning">
+                        <small>
+                            <i class="fas fa-exclamation-circle"></i>
+                            Payment Method: {{ order.payment_method|replace('_', ' ')|title }}
+                            <br>
+                            {% if order.payment_method == 'cash_on_delivery' %}
+                            Collect cash from customer upon delivery
+                            {% else %}
+                            Payment already received online
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    {% if order.payment_method == 'cash_on_delivery' and order.order_status == 'delivered' %}
+                    <div class="d-grid">
+                        <button class="btn btn-success" onclick="confirmPayment()">
+                            <i class="fas fa-check"></i> Confirm Payment Received
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Number:</span>
+                    <strong>{{ order.order_number }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Order Time:</span>
+                    <span>{{ order.created_at.strftime('%H:%M') }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Delivery Time:</span>
+                    <span>
+                        {% if order.order_status == 'delivered' %}
+                        {{ order.updated_at.strftime('%H:%M') }}
+                        {% else %}
+                        Estimated: 30 mins
+                        {% endif %}
+                    </span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Food Amount:</span>
+                    <span>₹{{ order.total_amount }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Delivery Charge:</span>
+                    <span>₹{{ order.delivery_charge }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax:</span>
+                    <span>₹{{ order.tax_amount }}</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <strong>Total:</strong>
+                    <strong>₹{{ order.final_amount }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateOrderStatus(status) {
+    const note = document.getElementById('deliveryNote').value;
+    
+    // Get current location for tracking
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                submitStatusUpdate(status, note, position);
+            },
+            function(error) {
+                // Continue without location
+                if(confirm('Unable to get location. Update status without location?')) {
+                    submitStatusUpdate(status, note, null);
+                }
+            }
+        );
+    } else {
+        submitStatusUpdate(status, note, null);
+    }
+}
+
+function submitStatusUpdate(status, note, position) {
+    const data = {
+        order_id: {{ order.id }},
+        status: status,
+        notes: note || `Order ${status.replace('_', ' ')} by delivery agent`
+    };
+    
+    if (position) {
+        data.latitude = position.coords.latitude;
+        data.longitude = position.coords.longitude;
+    }
+    
+    $.ajax({
+        url: '/delivery/update_order_status',
+        method: 'POST',
+        data: data,
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+
+function callCustomer() {
+    if(confirm(`Call customer at {{ order.customer_phone }}?`)) {
+        window.location.href = 'tel:{{ order.customer_phone }}';
+    }
+}
+
+function sendSMS() {
+    const message = "Your Tamil Food order #{{ order.order_number }} is on the way. Delivery agent: {{ session.full_name }}";
+    window.location.href = `sms:{{ order.customer_phone }}?body=${encodeURIComponent(message)}`;
+}
+
+function updateLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                showNotification('Location updated successfully!', 'success');
+            },
+            function(error) {
+                showNotification('Unable to update location', 'danger');
+            }
+        );
+    }
+}
+
+function getDirections(address) {
+    alert(`Getting directions to: ${address}\n\nThis will open in Google Maps in the actual app.`);
+}
+
+function callNumber(phone) {
+    window.location.href = `tel:${phone}`;
+}
+
+function confirmPayment() {
+    if(confirm('Confirm that you have received payment of ₹{{ order.final_amount }} from customer?')) {
+        showNotification('Payment confirmed successfully!', 'success');
+    }
+}
+</script>
+{% endblock %}
