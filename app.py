@@ -89,6 +89,8 @@ def login():
                 return redirect(url_for('seller_dashboard'))
             elif user['user_type'] == 'delivery':
                 return redirect(url_for('delivery_dashboard'))
+            elif user['user_type'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
         
         flash('Invalid username or password', 'danger')
     
@@ -1335,6 +1337,291 @@ def delivery_earnings():
     # For now, we'll just redirect to history
     # You can create a separate earnings.html template if needed
     return redirect(url_for('delivery_history'))
+
+# Add 'admin' to role_required decorator
+def role_required(roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                flash('Please login first', 'danger')
+                return redirect(url_for('login'))
+            if session.get('user_type') not in roles:
+                flash('Access denied', 'danger')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+# Admin Routes
+@app.route('/admin/dashboard')
+@login_required
+@role_required(['admin'])
+def admin_dashboard():
+    cur = mysql.connection.cursor()
+    
+    # Get counts
+    cur.execute("SELECT COUNT(*) as count FROM users WHERE user_type = 'customer'")
+    customer_count = cur.fetchone()['count']
+    
+    cur.execute("SELECT COUNT(*) as count FROM users WHERE user_type = 'seller'")
+    seller_count = cur.fetchone()['count']
+    
+    cur.execute("SELECT COUNT(*) as count FROM users WHERE user_type = 'delivery'")
+    delivery_count = cur.fetchone()['count']
+    
+    cur.execute("SELECT COUNT(*) as count FROM orders")
+    order_count = cur.fetchone()['count']
+    
+    # Get pending sellers for approval
+    cur.execute("""
+        SELECT s.*, u.username, u.email, u.phone, u.created_at as registered_date
+        FROM sellers s
+        JOIN users u ON s.user_id = u.id
+        WHERE s.verification_status = 'pending'
+        ORDER BY u.created_at DESC
+    """)
+    pending_sellers = cur.fetchall()
+    
+    # Get recent orders
+    cur.execute("""
+        SELECT o.*, u.full_name as customer_name, s.restaurant_name
+        FROM orders o
+        JOIN users u ON o.customer_id = u.id
+        JOIN sellers s ON o.seller_id = s.id
+        ORDER BY o.created_at DESC
+        LIMIT 10
+    """)
+    recent_orders = cur.fetchall()
+    
+    # Get recent users
+    cur.execute("""
+        SELECT * FROM users 
+        ORDER BY created_at DESC 
+        LIMIT 10
+    """)
+    recent_users = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('admin/dashboard.html',
+                         customer_count=customer_count,
+                         seller_count=seller_count,
+                         delivery_count=delivery_count,
+                         order_count=order_count,
+                         pending_sellers=pending_sellers,
+                         recent_orders=recent_orders,
+                         recent_users=recent_users)
+
+@app.route('/admin/users')
+@login_required
+@role_required(['admin'])
+def admin_users():
+    user_type = request.args.get('type', '')
+    
+    cur = mysql.connection.cursor()
+    
+    query = "SELECT * FROM users WHERE 1=1"
+    params = []
+    
+    if user_type:
+        query += " AND user_type = %s"
+        params.append(user_type)
+    
+    query += " ORDER BY created_at DESC"
+    
+    cur.execute(query, params)
+    users = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('admin/users.html', users=users, user_type=user_type)
+
+@app.route('/admin/sellers')
+@login_required
+@role_required(['admin'])
+def admin_sellers():
+    status_filter = request.args.get('status', '')
+    
+    cur = mysql.connection.cursor()
+    
+    query = """
+        SELECT s.*, u.username, u.email, u.phone, u.created_at as registered_date,
+               COUNT(DISTINCT fi.id) as menu_items,
+               COUNT(DISTINCT o.id) as total_orders
+        FROM sellers s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN food_items fi ON s.id = fi.seller_id
+        LEFT JOIN orders o ON s.id = o.seller_id
+        WHERE 1=1
+    """
+    params = []
+    
+    if status_filter:
+        query += " AND s.verification_status = %s"
+        params.append(status_filter)
+    
+    query += " GROUP BY s.id ORDER BY u.created_at DESC"
+    
+    cur.execute(query, params)
+    sellers = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('admin/sellers.html', sellers=sellers, status_filter=status_filter)
+
+@app.route('/admin/orders')
+@login_required
+@role_required(['admin'])
+def admin_orders():
+    status_filter = request.args.get('status', '')
+    
+    cur = mysql.connection.cursor()
+    
+    query = """
+        SELECT o.*, 
+               u.full_name as customer_name, u.phone as customer_phone,
+               s.restaurant_name, s.restaurant_phone,
+               da.full_name as delivery_agent_name
+        FROM orders o
+        JOIN users u ON o.customer_id = u.id
+        JOIN sellers s ON o.seller_id = s.id
+        LEFT JOIN users da ON o.delivery_agent_id = da.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if status_filter:
+        query += " AND o.order_status = %s"
+        params.append(status_filter)
+    
+    query += " ORDER BY o.created_at DESC"
+    
+    cur.execute(query, params)
+    orders = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('admin/orders.html', orders=orders, status_filter=status_filter)
+
+@app.route('/admin/update_seller_status', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def update_seller_status():
+    seller_id = request.form['seller_id']
+    status = request.form['status']
+    reason = request.form.get('reason', '')
+    
+    cur = mysql.connection.cursor()
+    
+    # Update seller status
+    cur.execute("""
+        UPDATE sellers 
+        SET verification_status = %s, is_verified = %s 
+        WHERE id = %s
+    """, (status, (status == 'approved'), seller_id))
+    
+    # Get seller info for notification
+    cur.execute("""
+        SELECT u.email, s.restaurant_name 
+        FROM sellers s 
+        JOIN users u ON s.user_id = u.id 
+        WHERE s.id = %s
+    """, (seller_id,))
+    seller = cur.fetchone()
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    flash(f'Seller status updated to {status}', 'success')
+    return redirect(url_for('admin_sellers'))
+
+@app.route('/admin/delete_user', methods=['POST'])
+@login_required
+@role_required(['admin'])
+def delete_user():
+    user_id = request.form['user_id']
+    
+    cur = mysql.connection.cursor()
+    
+    # Get user type first
+    cur.execute("SELECT user_type FROM users WHERE id = %s", (user_id,))
+    user = cur.fetchone()
+    
+    if user['user_type'] == 'seller':
+        # Delete seller and their menu items
+        cur.execute("SELECT id FROM sellers WHERE user_id = %s", (user_id,))
+        seller = cur.fetchone()
+        if seller:
+            cur.execute("DELETE FROM food_items WHERE seller_id = %s", (seller['id'],))
+            cur.execute("DELETE FROM sellers WHERE id = %s", (seller['id'],))
+    
+    # Delete user
+    cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    flash('User deleted successfully', 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/analytics')
+@login_required
+@role_required(['admin'])
+def admin_analytics():
+    cur = mysql.connection.cursor()
+    
+    # Sales data
+    cur.execute("""
+        SELECT DATE(created_at) as date, 
+               COUNT(*) as order_count,
+               SUM(final_amount) as revenue
+        FROM orders 
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date
+    """)
+    sales_data = cur.fetchall()
+    
+    # User growth
+    cur.execute("""
+        SELECT DATE(created_at) as date, 
+               COUNT(*) as user_count
+        FROM users 
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date
+    """)
+    user_growth = cur.fetchall()
+    
+    # Top restaurants
+    cur.execute("""
+        SELECT s.restaurant_name, 
+               COUNT(o.id) as order_count,
+               SUM(o.final_amount) as revenue
+        FROM orders o
+        JOIN sellers s ON o.seller_id = s.id
+        GROUP BY s.id
+        ORDER BY revenue DESC
+        LIMIT 10
+    """)
+    top_restaurants = cur.fetchall()
+    
+    # User distribution
+    cur.execute("""
+        SELECT user_type, COUNT(*) as count
+        FROM users
+        GROUP BY user_type
+    """)
+    user_distribution = cur.fetchall()
+    
+    cur.close()
+    
+    return render_template('admin/analytics.html',
+                         sales_data=sales_data,
+                         user_growth=user_growth,
+                         top_restaurants=top_restaurants,
+                         user_distribution=user_distribution)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

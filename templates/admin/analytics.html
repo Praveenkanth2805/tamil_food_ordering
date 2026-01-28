@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %} - Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">அமைப்பு பகுப்பாய்வு</h2>
+        <p class="text-muted">System-wide analytics and performance metrics</p>
+    </div>
+</div>
+
+<!-- Revenue Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #28a745;">
+                <i class="fas fa-rupee-sign"></i>
+            </div>
+            <h2 class="stat-number">
+                ₹{{ sales_data|sum(attribute='revenue')|default(0)|round|int }}
+            </h2>
+            <p class="stat-label">30-Day Revenue</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #17a2b8;">
+                <i class="fas fa-shopping-bag"></i>
+            </div>
+            <h2 class="stat-number">
+                {{ sales_data|sum(attribute='order_count')|default(0) }}
+            </h2>
+            <p class="stat-label">30-Day Orders</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #ffc107;">
+                <i class="fas fa-users"></i>
+            </div>
+            <h2 class="stat-number">
+                {{ user_growth|sum(attribute='user_count')|default(0) }}
+            </h2>
+            <p class="stat-label">30-Day New Users</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #dc3545;">
+                <i class="fas fa-store"></i>
+            </div>
+            <h2 class="stat-number">{{ top_restaurants|length }}</h2>
+            <p class="stat-label">Active Restaurants</p>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Revenue & Orders (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie"></i> User Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="userChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Restaurants -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-trophy"></i> Top Restaurants by Revenue</h5>
+            </div>
+            <div class="card-body">
+                {% if top_restaurants %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Restaurant</th>
+                                <th>Orders</th>
+                                <th>Revenue</th>
+                                <th>Avg Order</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for restaurant in top_restaurants %}
+                            <tr>
+                                <td>{{ restaurant.restaurant_name }}</td>
+                                <td>{{ restaurant.order_count }}</td>
+                                <td>₹{{ restaurant.revenue|round|int }}</td>
+                                <td>₹{{ (restaurant.revenue / restaurant.order_count if restaurant.order_count > 0 else 0)|round|int }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No restaurant data available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> User Growth (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="growthChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart
+const revenueDates = {{ sales_data|map(attribute='date')|list|tojson }};
+const revenueData = {{ sales_data|map(attribute='revenue')|list|tojson }};
+const orderData = {{ sales_data|map(attribute='order_count')|list|tojson }};
+
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: revenueDates,
+        datasets: [
+            {
+                label: 'Revenue (₹)',
+                data: revenueData,
+                borderColor: 'rgb(40, 167, 69)',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                yAxisID: 'y',
+                fill: true
+            },
+            {
+                label: 'Orders',
+                data: orderData,
+                borderColor: 'rgb(23, 162, 184)',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                yAxisID: 'y1',
+                fill: true
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Revenue (₹)'
+                },
+                ticks: {
+                    callback: function(value) {
+                        return '₹' + value;
+                    }
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Orders'
+                },
+                grid: {
+                    drawOnChartArea: false
+                }
+            }
+        }
+    }
+});
+
+// User Distribution Chart
+const userLabels = {{ user_distribution|map(attribute='user_type')|list|tojson }};
+const userCounts = {{ user_distribution|map(attribute='count')|list|tojson }};
+const userColors = ['#007bff', '#28a745', '#ffc107', '#dc3545'];
+
+const userCtx = document.getElementById('userChart').getContext('2d');
+const userChart = new Chart(userCtx, {
+    type: 'doughnut',
+    data: {
+        labels: userLabels.map(label => label.charAt(0).toUpperCase() + label.slice(1)),
+        datasets: [{
+            data: userCounts,
+            backgroundColor: userColors,
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Growth Chart
+const growthDates = {{ user_growth|map(attribute='date')|list|tojson }};
+const growthData = {{ user_growth|map(attribute='user_count')|list|tojson }};
+
+const growthCtx = document.getElementById('growthChart').getContext('2d');
+const growthChart = new Chart(growthCtx, {
+    type: 'bar',
+    data: {
+        labels: growthDates,
+        datasets: [{
+            label: 'New Users',
+            data: growthData,
+            backgroundColor: 'rgba(255, 107, 53, 0.7)',
+            borderColor: 'rgb(255, 107, 53)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Number of Users'
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

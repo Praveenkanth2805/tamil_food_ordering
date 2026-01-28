@@ -25,6 +25,14 @@
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    {% if session.user_type == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="fas fa-cogs"></i> Admin
+                        </a>
+                    </li>
+                    {% endif %}
+                    
                     {% if 'user_id' in session %}
                     <li class="nav-item">
                         <span class="nav-link">வணக்கம், {{ session.full_name }}!</span>
@@ -167,7 +175,8 @@
                 <div class="col-md-4">
                     <h5>தமிழ் உணவு</h5>
                     <p>Authentic Tamil Nadu cuisine delivered to your doorstep</p>
-                    <p><i class="fab fa-github"></i> <a href="https://github.com/Praveenkanth2805" target="_blank">GitHub
+                    <p><i class="fab fa-github"></i> <a href="https://github.com/Praveenkanth2805"
+                            target="_blank">GitHub
                             Profile</a></p>
                     <p><i class="fas fa-code"></i> Developed with ❤️ using AI assistance</p>
                 </div>
@@ -209,7 +218,8 @@
             <div class="text-center">
                 <p>&copy; 2026 Tamil Food Ordering System. All rights reserved.</p>
                 <p class="small">
-                    Developed by <a href="https://github.com/Praveenkanth2805" target="_blank" class="text-light">PraveenKanth G</a>
+                    Developed by <a href="https://github.com/Praveenkanth2805" target="_blank"
+                        class="text-light">PraveenKanth G</a>
                     | Project managed with AI assistance
                 </p>
             </div>

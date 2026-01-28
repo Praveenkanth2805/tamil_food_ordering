@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %} - Manage Users{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="tamil-title">பயனர் மேலாண்மை</h2>
+                <p class="text-muted">Manage system users</p>
+            </div>
+            <div class="btn-group">
+                <a href="{{ url_for('admin_users') }}" 
+                   class="btn {% if not user_type %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    All Users
+                </a>
+                <a href="{{ url_for('admin_users') }}?type=customer" 
+                   class="btn {% if user_type == 'customer' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Customers
+                </a>
+                <a href="{{ url_for('admin_users') }}?type=seller" 
+                   class="btn {% if user_type == 'seller' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Sellers
+                </a>
+                <a href="{{ url_for('admin_users') }}?type=delivery" 
+                   class="btn {% if user_type == 'delivery' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Delivery
+                </a>
+                <a href="{{ url_for('admin_users') }}?type=admin" 
+                   class="btn {% if user_type == 'admin' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Admins
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Registered</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <strong>{{ user.full_name }}</strong><br>
+                                    <small class="text-muted">User ID: {{ user.id }}</small>
+                                </td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.phone }}</td>
+                                <td>
+                                    <span class="badge bg-{% if user.user_type == 'customer' %}primary{% elif user.user_type == 'seller' %}success{% elif user.user_type == 'delivery' %}warning{% else %}dark{% endif %}">
+                                        {{ user.user_type|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#viewUserModal{{ user.id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if user.user_type != 'admin' %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDelete({{ user.id }}, '{{ user.full_name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- View User Modal -->
+                                    <div class="modal fade" id="viewUserModal{{ user.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">User Details</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label text-muted">Full Name</label>
+                                                        <p>{{ user.full_name }}</p>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">Username</label>
+                                                            <p>{{ user.username }}</p>
+                                                        </div>
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">User Type</label>
+                                                            <p>
+                                                                <span class="badge bg-{% if user.user_type == 'customer' %}primary{% elif user.user_type == 'seller' %}success{% elif user.user_type == 'delivery' %}warning{% else %}dark{% endif %}">
+                                                                    {{ user.user_type|title }}
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">Email</label>
+                                                            <p>{{ user.email }}</p>
+                                                        </div>
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">Phone</label>
+                                                            <p>{{ user.phone }}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label text-muted">Address</label>
+                                                        <p>{{ user.address or 'Not provided' }}</p>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">Status</label>
+                                                            <p>
+                                                                {% if user.is_active %}
+                                                                <span class="badge bg-success">Active</span>
+                                                                {% else %}
+                                                                <span class="badge bg-danger">Inactive</span>
+                                                                {% endif %}
+                                                            </p>
+                                                        </div>
+                                                        <div class="col-md-6 mb-3">
+                                                            <label class="form-label text-muted">Registered</label>
+                                                            <p>{{ user.created_at.strftime('%d %b %Y, %H:%M') }}</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {% if user.user_type == 'seller' %}
+                                                    <div class="alert alert-info">
+                                                        <h6>Restaurant Information</h6>
+                                                        {% set seller_info = [] %}
+                                                        <!-- Seller info would be fetched via AJAX in production -->
+                                                        <p class="mb-0">Click "View Restaurant" in sellers page for details</p>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4>No users found</h4>
+                    <p class="text-muted">
+                        {% if user_type %}
+                            No {{ user_type }} users
+                        {% else %}
+                            No users in the system
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(userId, userName) {
+    if(confirm(`Are you sure you want to delete user "${userName}"?\n\nThis action cannot be undone and will delete all associated data.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/delete_user';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'user_id';
+        input.value = userId;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

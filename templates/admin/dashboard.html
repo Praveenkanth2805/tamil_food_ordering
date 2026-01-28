@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %} - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="tamil-title">நிர்வாக கட்டுப்பாட்டு பலகை</h2>
+        <p class="text-muted">System Administration Dashboard</p>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #FF6B35;">
+                <i class="fas fa-users"></i>
+            </div>
+            <h2 class="stat-number">{{ customer_count }}</h2>
+            <p class="stat-label">Customers</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #2A9D8F;">
+                <i class="fas fa-store"></i>
+            </div>
+            <h2 class="stat-number">{{ seller_count }}</h2>
+            <p class="stat-label">Restaurants</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #E9C46A;">
+                <i class="fas fa-motorcycle"></i>
+            </div>
+            <h2 class="stat-number">{{ delivery_count }}</h2>
+            <p class="stat-label">Delivery Agents</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #264653;">
+                <i class="fas fa-shopping-bag"></i>
+            </div>
+            <h2 class="stat-number">{{ order_count }}</h2>
+            <p class="stat-label">Total Orders</p>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Approvals -->
+{% if pending_sellers %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-clock"></i> Pending Restaurant Approvals</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Restaurant Name</th>
+                                <th>Owner</th>
+                                <th>Contact</th>
+                                <th>Address</th>
+                                <th>Registered Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for seller in pending_sellers %}
+                            <tr>
+                                <td><strong>{{ seller.restaurant_name }}</strong></td>
+                                <td>{{ seller.username }}</td>
+                                <td>
+                                    {{ seller.phone }}<br>
+                                    <small>{{ seller.email }}</small>
+                                </td>
+                                <td>{{ seller.restaurant_address|truncate(30) }}</td>
+                                <td>{{ seller.registered_date.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <form method="POST" action="{{ url_for('update_seller_status') }}" class="d-inline">
+                                            <input type="hidden" name="seller_id" value="{{ seller.id }}">
+                                            <input type="hidden" name="status" value="approved">
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        </form>
+                                        <button class="btn btn-sm btn-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#rejectModal{{ seller.id }}">
+                                            <i class="fas fa-times"></i> Reject
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Reject Modal -->
+                                    <div class="modal fade" id="rejectModal{{ seller.id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Reject Restaurant</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form method="POST" action="{{ url_for('update_seller_status') }}">
+                                                    <input type="hidden" name="seller_id" value="{{ seller.id }}">
+                                                    <input type="hidden" name="status" value="rejected">
+                                                    <div class="modal-body">
+                                                        <p>Reject <strong>{{ seller.restaurant_name }}</strong>?</p>
+                                                        <div class="mb-3">
+                                                            <label class="form-label">Reason for rejection (optional)</label>
+                                                            <textarea class="form-control" name="reason" rows="3" 
+                                                                      placeholder="Provide reason for rejection..."></textarea>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-danger">Reject Restaurant</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Recent Orders -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Orders</h5>
+                <a href="{{ url_for('admin_orders') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_orders %}
+                <div class="list-group">
+                    {% for order in recent_orders %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ order.restaurant_name }}</h6>
+                            <small>{{ order.created_at.strftime('%H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">Order #{{ order.order_number }} - ₹{{ order.final_amount }}</p>
+                        <small>Customer: {{ order.customer_name }}</small>
+                        <div class="mt-2">
+                            <span class="badge status-{{ order.order_status.replace(' ', '_') }}">
+                                {{ order.order_status|title }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No recent orders</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Users -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-user-plus"></i> Recent Registrations</h5>
+                <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_users %}
+                <div class="list-group">
+                    {% for user in recent_users %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ user.full_name }}</h6>
+                            <small>{{ user.created_at.strftime('%d/%m') }}</small>
+                        </div>
+                        <p class="mb-1">{{ user.username }} - {{ user.email }}</p>
+                        <span class="badge bg-{% if user.user_type == 'customer' %}primary{% elif user.user_type == 'seller' %}success{% elif user.user_type == 'delivery' %}warning{% else %}dark{% endif %}">
+                            {{ user.user_type|title }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No recent registrations</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-users"></i><br>
+                            Manage Users
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="{{ url_for('admin_sellers') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-store"></i><br>
+                            Restaurants
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="{{ url_for('admin_orders') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-shopping-bag"></i><br>
+                            All Orders
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-6 mb-3">
+                        <a href="{{ url_for('admin_analytics') }}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-chart-bar"></i><br>
+                            Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

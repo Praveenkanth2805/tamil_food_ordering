@@ -14,3 +14,4 @@ class Config:
     def init_app(app):
         if not os.path.exists(Config.UPLOAD_FOLDER):
             os.makedirs(Config.UPLOAD_FOLDER)
+

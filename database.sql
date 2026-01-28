@@ -174,3 +174,16 @@ CREATE INDEX idx_orders_status ON orders(order_status);
 CREATE INDEX idx_food_seller ON food_items(seller_id);
 CREATE INDEX idx_order_tracking_order ON order_tracking(order_id);
 CREATE INDEX idx_cart_customer ON cart(customer_id);
+
+-- Update user_type to include admin
+ALTER TABLE users MODIFY user_type ENUM('customer', 'seller', 'delivery', 'admin');
+
+-- Add verification_status to sellers table
+ALTER TABLE sellers ADD COLUMN verification_status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending';
+
+-- Update existing verified sellers
+UPDATE sellers SET verification_status = 'approved' WHERE is_verified = TRUE;
+
+-- Create one admin user (password: admin123)
+INSERT INTO users (username, password, email, phone, full_name, user_type) 
+VALUES ('admin', 'scrypt:32768:8:1$SfmYEuRkQcA83TTx$1c104fef9815ebef550ca11cf4841ce4f4a4e54732dadf2d70d8063aa8e4bffc958b826d7a16d146519d56c6d9e838a130e914b8b6a1684f3f187db540915cae', 'admin@tamilfood.com', '9876543210', 'System Admin', 'admin');
