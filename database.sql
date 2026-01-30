@@ -187,3 +187,30 @@ UPDATE sellers SET verification_status = 'approved' WHERE is_verified = TRUE;
 -- Create one admin user (password: admin123)
 INSERT INTO users (username, password, email, phone, full_name, user_type) 
 VALUES ('admin', 'scrypt:32768:8:1$SfmYEuRkQcA83TTx$1c104fef9815ebef550ca11cf4841ce4f4a4e54732dadf2d70d8063aa8e4bffc958b826d7a16d146519d56c6d9e838a130e914b8b6a1684f3f187db540915cae', 'admin@tamilfood.com', '9876543210', 'System Admin', 'admin');
+
+
+-- Delivery Agent Availability Table
+CREATE TABLE IF NOT EXISTS delivery_agent_availability (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    delivery_agent_id INT NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    current_latitude DECIMAL(10, 8),
+    current_longitude DECIMAL(11, 8),
+    last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (delivery_agent_id) REFERENCES users(id),
+    UNIQUE KEY unique_agent (delivery_agent_id)
+);
+
+-- Add coordinates to sellers table if not exists
+ALTER TABLE sellers 
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
+
+-- Add coordinates to users (for delivery agents)
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8),
+ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8);
+
+-- Add delivery commission rate
+ALTER TABLE orders 
+ADD COLUMN IF NOT EXISTS delivery_commission DECIMAL(10, 2) DEFAULT 0;

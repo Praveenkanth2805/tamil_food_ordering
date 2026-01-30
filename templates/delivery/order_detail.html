@@ -3,6 +3,7 @@
 {% block title %} - Delivery Order #{{ order.order_number }}{% endblock %}
 
 {% block content %}
+{% set statuses = tracking | map(attribute='status') | list %}
 <div class="row mb-4">
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center">
@@ -76,32 +77,35 @@
                 <div class="mt-4">
                     <h6>Delivery Progress</h6>
                     <div class="tracking-steps">
-                        <div class="step {% if 'ready' in [t.status for t in tracking] %}completed{% endif %} 
-                                    {% if order.order_status == 'ready' %}active{% endif %}">
+                        <div class="step {% if 'ready' in statuses %}completed{% endif %}
+            {% if order.order_status == 'ready' %}active{% endif %}">
                             <div class="step-circle">
                                 <i class="fas fa-box"></i>
                             </div>
                             <small>Ready</small>
                         </div>
                         
-                        <div class="step {% if 'picked_up' in [t.status for t in tracking] %}completed{% endif %} 
-                                    {% if order.order_status == 'picked_up' %}active{% endif %}">
+                        <div class="step {% if 'picked_up' in statuses %}completed{% endif %}
+            {% if order.order_status == 'picked_up' %}active{% endif %}">
+
                             <div class="step-circle">
                                 <i class="fas fa-store"></i>
                             </div>
                             <small>Picked Up</small>
                         </div>
                         
-                        <div class="step {% if 'on_the_way' in [t.status for t in tracking] %}completed{% endif %} 
-                                    {% if order.order_status == 'on_the_way' %}active{% endif %}">
+                        <div class="step {% if 'on_the_way' in statuses %}completed{% endif %}
+            {% if order.order_status == 'on_the_way' %}active{% endif %}">
+
                             <div class="step-circle">
                                 <i class="fas fa-road"></i>
                             </div>
                             <small>On the Way</small>
                         </div>
                         
-                        <div class="step {% if 'delivered' in [t.status for t in tracking] %}completed{% endif %} 
-                                    {% if order.order_status == 'delivered' %}active{% endif %}">
+                        <div class="step {% if 'delivered' in statuses %}completed{% endif %}
+            {% if order.order_status == 'delivered' %}active{% endif %}">
+
                             <div class="step-circle">
                                 <i class="fas fa-home"></i>
                             </div>

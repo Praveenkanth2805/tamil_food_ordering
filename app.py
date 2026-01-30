@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash, send_from_directory
 from flask_mysqldb import MySQL
 import os
 import datetime
@@ -8,6 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 import math
+from MySQLdb.cursors import DictCursor
 from config import Config
 from decimal import Decimal
 
@@ -151,7 +152,7 @@ def logout():
 @login_required
 @role_required(['customer'])
 def customer_dashboard():
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(DictCursor)
     
     # Get active orders
     cur.execute("""
@@ -467,8 +468,9 @@ def checkout():
 def customer_orders():
     status_filter = request.args.get('status', '')
     
-    cur = mysql.connection.cursor()
+    cur = mysql.connection.cursor(DictCursor)
     
+
     query = """
         SELECT o.*, s.restaurant_name, 
                u.full_name as delivery_agent_name,
@@ -491,9 +493,14 @@ def customer_orders():
     cur.execute(query, params)
     orders = cur.fetchall()
     
+
     cur.close()
     
-    return render_template('customer/orders.html', orders=orders, status_filter=status_filter)
+    return render_template(
+        'customer/orders.html',
+        orders=orders,
+        status_filter=status_filter
+    )
 
 @app.route('/customer/order/<int:order_id>')
 @login_required
@@ -635,6 +642,52 @@ def seller_orders():
                          orders=orders,
                          status_filter=status_filter,
                          seller=seller)
+@app.route('/seller/mark_order_ready', methods=['POST'])
+@login_required
+@role_required(['seller'])
+def mark_order_ready():
+    order_id = request.form['order_id']
+    
+    cur = mysql.connection.cursor()
+    
+    # Verify seller owns this order
+    cur.execute("SELECT seller_id FROM orders WHERE id = %s", (order_id,))
+    order = cur.fetchone()
+    
+    cur.execute("SELECT id FROM sellers WHERE user_id = %s", (session['user_id'],))
+    seller = cur.fetchone()
+    
+    if order['seller_id'] != seller['id']:
+        flash('Unauthorized action', 'danger')
+        return redirect(url_for('seller_orders'))
+    
+    # Update order status to "ready"
+    cur.execute("""
+        UPDATE orders 
+        SET order_status = 'ready' 
+        WHERE id = %s
+    """, (order_id,))
+    
+    # Add tracking entry
+    cur.execute("""
+        INSERT INTO order_tracking (order_id, status, notes)
+        VALUES (%s, 'ready', 'Order is ready for pickup')
+    """, (order_id,))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    # Try to auto-assign delivery agent
+    success, message = auto_assign_delivery_agent(order_id)
+    
+    if success:
+        flash(f'Order marked as ready. {message}', 'success')
+    else:
+        flash(f'Order marked as ready. Note: {message}', 'warning')
+    
+    return redirect(request.referrer)
+
+
 
 @app.route('/seller/order/<int:order_id>')
 @login_required
@@ -778,6 +831,19 @@ def assign_delivery_agent():
     cur.close()
     
     flash('Delivery agent assigned successfully', 'success')
+    return redirect(request.referrer)
+
+@app.route('/admin/auto_assign_delivery/<int:order_id>')
+@login_required
+@role_required(['admin'])
+def admin_auto_assign_delivery(order_id):
+    success, message = auto_assign_delivery_agent(order_id)
+    
+    if success:
+        flash(message, 'success')
+    else:
+        flash(message, 'danger')
+    
     return redirect(request.referrer)
 
 @app.route('/seller/menu')
@@ -1029,6 +1095,130 @@ def delivery_dashboard():
     return render_template('delivery/dashboard.html',
                          active_orders=active_orders,
                          today_stats=today_stats)
+
+@app.route('/delivery/update_location', methods=['POST'])
+@login_required
+@role_required(['delivery'])
+def update_delivery_location():
+    latitude = request.form.get('latitude')
+    longitude = request.form.get('longitude')
+    
+    if not latitude or not longitude:
+        return jsonify({'success': False, 'message': 'Invalid coordinates'})
+    
+    cur = mysql.connection.cursor()
+    
+    # Update user coordinates
+    cur.execute("""
+        UPDATE users 
+        SET latitude = %s, longitude = %s 
+        WHERE id = %s
+    """, (latitude, longitude, session['user_id']))
+    
+    # Update availability table
+    cur.execute("""
+        INSERT INTO delivery_agent_availability 
+        (delivery_agent_id, current_latitude, current_longitude, is_available, last_active)
+        VALUES (%s, %s, %s, TRUE, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE 
+        current_latitude = VALUES(current_latitude),
+        current_longitude = VALUES(current_longitude),
+        last_active = VALUES(last_active)
+    """, (session['user_id'], latitude, longitude))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    return jsonify({'success': True, 'message': 'Location updated'})
+
+@app.route('/delivery/api/available_orders')
+@login_required
+@role_required(['delivery'])
+def get_available_orders():
+    """
+    API endpoint for delivery agents to see available orders
+    """
+    cur = mysql.connection.cursor()
+    
+    # Get orders ready for delivery but not assigned
+    cur.execute("""
+        SELECT o.*, s.restaurant_name, s.restaurant_address, 
+               s.latitude as restaurant_lat, s.longitude as restaurant_lng,
+               u.full_name as customer_name, u.address as customer_address,
+               u.latitude as customer_lat, u.longitude as customer_lng
+        FROM orders o
+        JOIN sellers s ON o.seller_id = s.id
+        JOIN users u ON o.customer_id = u.id
+        WHERE o.order_status = 'ready'
+        AND o.delivery_agent_id IS NULL
+        ORDER BY o.created_at ASC
+    """)
+    
+    orders = cur.fetchall()
+    
+    # Add distance calculation for each order
+    for order in orders:
+        if order['restaurant_lat'] and order['restaurant_lng']:
+            # Get delivery agent's current location
+            cur.execute("""
+                SELECT current_latitude, current_longitude 
+                FROM delivery_agent_availability 
+                WHERE delivery_agent_id = %s
+            """, (session['user_id'],))
+            
+            agent_location = cur.fetchone()
+            
+            if agent_location and agent_location['current_latitude']:
+                distance = calculate_distance(
+                    order['restaurant_lat'], order['restaurant_lng'],
+                    agent_location['current_latitude'], agent_location['current_longitude']
+                )
+                order['distance'] = round(distance, 2)
+                order['estimated_time'] = int(distance * 3)  # Rough estimate: 3 min per km
+    
+    cur.close()
+    
+    return jsonify({'orders': orders})
+
+@app.route('/delivery/accept_order/<int:order_id>', methods=['POST'])
+@login_required
+@role_required(['delivery'])
+def accept_order(order_id):
+    cur = mysql.connection.cursor()
+    
+    # Check if agent is available
+    cur.execute("""
+        SELECT is_available FROM delivery_agent_availability 
+        WHERE delivery_agent_id = %s
+    """, (session['user_id'],))
+    
+    availability = cur.fetchone()
+    
+    if not availability or not availability['is_available']:
+        return jsonify({'success': False, 'message': 'You are not available'})
+    
+    # Check if order is still available
+    cur.execute("""
+        SELECT order_status, delivery_agent_id 
+        FROM orders 
+        WHERE id = %s
+    """, (order_id,))
+    
+    order = cur.fetchone()
+    
+    if not order or order['delivery_agent_id']:
+        return jsonify({'success': False, 'message': 'Order already assigned'})
+    
+    if order['order_status'] != 'ready':
+        return jsonify({'success': False, 'message': 'Order not ready for delivery'})
+    
+    # Assign agent to order
+    success, message = manual_assign_delivery_agent(order_id, session['user_id'])
+    
+    if success:
+        return jsonify({'success': True, 'message': message})
+    else:
+        return jsonify({'success': False, 'message': message})
 
 @app.route('/delivery/orders')
 @login_required
@@ -1634,6 +1824,217 @@ def admin_analytics():
                          user_growth=user_growth,
                          top_restaurants=top_restaurants,
                          user_distribution=user_distribution)
+
+import math
+from decimal import Decimal
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate distance between two coordinates using Haversine formula
+    Returns distance in kilometers
+    """
+    if not all([lat1, lon1, lat2, lon2]):
+        return float('inf')
+    
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    r = 6371  # Radius of earth in kilometers
+    return c * r
+
+def find_nearest_delivery_agent(restaurant_lat, restaurant_lng):
+    """
+    Find the nearest available delivery agent to the restaurant
+    """
+    cur = mysql.connection.cursor()
+    
+    # Get all available delivery agents with their current location
+    cur.execute("""
+        SELECT u.*, da.is_available, da.current_latitude, da.current_longitude
+        FROM users u
+        JOIN delivery_agent_availability da ON u.id = da.delivery_agent_id
+        WHERE u.user_type = 'delivery' 
+        AND da.is_available = TRUE
+        AND da.current_latitude IS NOT NULL 
+        AND da.current_longitude IS NOT NULL
+        AND u.is_active = TRUE
+    """)
+    
+    available_agents = cur.fetchall()
+    cur.close()
+    
+    if not available_agents:
+        return None
+    
+    # Calculate distance for each agent
+    agents_with_distance = []
+    for agent in available_agents:
+        distance = calculate_distance(
+            restaurant_lat, restaurant_lng,
+            agent['current_latitude'], agent['current_longitude']
+        )
+        
+        # Calculate agent score based on multiple factors
+        score = calculate_agent_score(agent, distance)
+        
+        agents_with_distance.append({
+            'agent': agent,
+            'distance': distance,
+            'score': score
+        })
+    
+    # Sort by score (higher is better) then by distance
+    agents_with_distance.sort(key=lambda x: (-x['score'], x['distance']))
+    
+    return agents_with_distance[0]['agent'] if agents_with_distance else None
+
+def calculate_agent_score(agent, distance):
+    """
+    Calculate a score for agent based on various factors
+    Higher score = better candidate
+    """
+    score = 100  # Base score
+    
+    # Distance penalty (farther = lower score)
+    if distance < 5:  # Within 5km
+        score += 50
+    elif distance < 10:  # Within 10km
+        score += 30
+    elif distance < 15:  # Within 15km
+        score += 10
+    else:
+        score -= (distance - 15) * 2  # Penalty for distance beyond 15km
+    
+    # Get agent's performance metrics
+    cur = mysql.connection.cursor()
+    
+    # Get delivery history
+    cur.execute("""
+        SELECT 
+            COUNT(*) as total_deliveries,
+            AVG(TIMESTAMPDIFF(MINUTE, created_at, updated_at)) as avg_delivery_time,
+            SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) as successful_deliveries
+        FROM orders 
+        WHERE delivery_agent_id = %s
+    """, (agent['id'],))
+    
+    performance = cur.fetchone()
+    cur.close()
+    
+    # Experience bonus
+    total_deliveries = performance['total_deliveries'] or 0
+    score += min(total_deliveries * 0.5, 20)  # Max 20 points for experience
+    
+    # Rating bonus (if you have rating system)
+    # Assuming rating column exists in users table
+    if agent.get('rating'):
+        score += agent['rating'] * 10
+    
+    return max(score, 0)  # Ensure score is not negative
+
+def auto_assign_delivery_agent(order_id):
+    """
+    Automatically assign delivery agent to an order
+    """
+    cur = mysql.connection.cursor()
+    
+    # Get order details including restaurant location
+    cur.execute("""
+        SELECT o.*, s.latitude, s.longitude
+        FROM orders o
+        JOIN sellers s ON o.seller_id = s.id
+        WHERE o.id = %s
+    """, (order_id,))
+    
+    order = cur.fetchone()
+    
+    if not order or not order['latitude'] or not order['longitude']:
+        return False, "Restaurant location not available"
+    
+    # Find nearest available agent
+    agent = find_nearest_delivery_agent(
+        order['latitude'], 
+        order['longitude']
+    )
+    
+    if not agent:
+        return False, "No available delivery agents found"
+    
+    # Assign agent to order
+    cur.execute("""
+        UPDATE orders 
+        SET delivery_agent_id = %s, 
+            order_status = 'assigned',
+            delivery_commission = final_amount * 0.15  -- 15% commission
+        WHERE id = %s
+    """, (agent['id'], order_id))
+    
+    # Mark agent as unavailable
+    cur.execute("""
+        UPDATE delivery_agent_availability 
+        SET is_available = FALSE 
+        WHERE delivery_agent_id = %s
+    """, (agent['id'],))
+    
+    # Add tracking entry
+    cur.execute("""
+        INSERT INTO order_tracking (order_id, status, notes)
+        VALUES (%s, 'assigned', 'Delivery agent %s assigned to order')
+    """, (order_id, agent['full_name']))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    return True, f"Order assigned to {agent['full_name']}"
+
+def manual_assign_delivery_agent(order_id, agent_id):
+    """
+    Manually assign specific delivery agent to an order
+    """
+    cur = mysql.connection.cursor()
+    
+    # Check if agent is available
+    cur.execute("""
+        SELECT is_available FROM delivery_agent_availability 
+        WHERE delivery_agent_id = %s
+    """, (agent_id,))
+    
+    availability = cur.fetchone()
+    
+    if not availability or not availability['is_available']:
+        return False, "Delivery agent is not available"
+    
+    # Assign agent to order
+    cur.execute("""
+        UPDATE orders 
+        SET delivery_agent_id = %s, 
+            order_status = 'assigned',
+            delivery_commission = final_amount * 0.15
+        WHERE id = %s
+    """, (agent_id, order_id))
+    
+    # Mark agent as unavailable
+    cur.execute("""
+        UPDATE delivery_agent_availability 
+        SET is_available = FALSE 
+        WHERE delivery_agent_id = %s
+    """, (agent_id,))
+    
+    # Add tracking entry
+    cur.execute("""
+        INSERT INTO order_tracking (order_id, status, notes)
+        VALUES (%s, 'assigned', 'Delivery agent manually assigned to order')
+    """, (order_id,))
+    
+    mysql.connection.commit()
+    cur.close()
+    
+    return True, "Delivery agent assigned successfully"
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

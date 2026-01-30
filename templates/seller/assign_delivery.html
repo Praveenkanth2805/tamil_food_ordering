@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Delivery Agent{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Assign Delivery Agent for Order #{{ order.order_number }}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Customer:</strong> {{ order.customer_name }}<br>
+                        <strong>Delivery Address:</strong> {{ order.customer_address }}<br>
+                        <strong>Order Amount:</strong> ₹{{ order.final_amount }}
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('assign_delivery_agent') }}">
+                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                        
+                        <div class="mb-3">
+                            <label for="delivery_agent_id" class="form-label">Select Delivery Agent</label>
+                            <select class="form-select" id="delivery_agent_id" name="delivery_agent_id" required>
+                                <option value="">Choose an agent...</option>
+                                {% for agent in delivery_agents %}
+                                <option value="{{ agent.id }}">
+                                    {{ agent.full_name }} 
+                                    {% if agent.current_latitude and agent.current_longitude %}
+                                    ({{ "%.1f"|format(calculate_distance(order.restaurant_lat, order.restaurant_lng, agent.current_latitude, agent.current_longitude)) }} km away)
+                                    {% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">Assign Agent</button>
+                            <a href="{{ url_for('seller_order_detail', order_id=order.id) }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="d-grid">
+                        <button class="btn btn-success" onclick="autoAssign()">
+                            <i class="fas fa-robot"></i> Auto-Assign Nearest Agent
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function autoAssign() {
+    if (confirm('Auto-assign the nearest available delivery agent?')) {
+        window.location.href = "{{ url_for('admin_auto_assign_delivery', order_id=order.id) }}";
+    }
+}
+</script>
+{% endblock %}

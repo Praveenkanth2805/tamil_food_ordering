@@ -12,14 +12,14 @@
             </div>
             <div>
                 <form method="POST" action="{{ url_for('update_availability') }}" class="d-inline">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-toggle-on"></i> Available
+                    <button type="submit"  class="btn btn-danger ms-2">
+                        <i class="fas fa-toggle-off"></i> Unvailable
                     </button>
                 </form>
                 <form method="POST" action="{{ url_for('update_availability') }}" class="d-inline">
                     <input type="hidden" name="is_available" value="false">
-                    <button type="submit" class="btn btn-danger ms-2">
-                        <i class="fas fa-toggle-off"></i> Unavailable
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-toggle-on"></i> Available
                     </button>
                 </form>
             </div>
@@ -394,5 +394,54 @@ function showEarnings() {
 function refreshOrders() {
     location.reload();
 }
+</script>
+<!-- Add this to your delivery dashboard template -->
+<script>
+// Get current location and update
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            
+            // Send location to server
+            fetch('/delivery/update_location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `latitude=${latitude}&longitude=${longitude}`
+            });
+        },
+        function(error) {
+            console.error('Error getting location:', error);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+        }
+    );
+}
+
+// Update location every minute
+setInterval(() => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                
+                fetch('/delivery/update_location', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `latitude=${latitude}&longitude=${longitude}`
+                });
+            }
+        );
+    }
+}, 60000);
 </script>
 {% endblock %}

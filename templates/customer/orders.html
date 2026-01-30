@@ -1,207 +1,117 @@
 {% extends "base.html" %}
 
-{% block title %} - Shopping Cart{% endblock %}
+{% block title %} - My Orders{% endblock %}
 
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
-        <h2 class="tamil-title">உங்கள் கார்ட்டில்</h2>
-        <p class="text-muted">Review your order before checkout</p>
+        <h2 class="tamil-title">உங்கள் ஆர்டர்கள்</h2>
+        <p class="text-muted">Track and manage your orders</p>
     </div>
 </div>
 
-{% if cart_by_seller %}
-    {% for seller_id, seller_data in cart_by_seller.items() %}
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-store"></i> {{ seller_data.restaurant_name }}
-            </h5>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('customer_orders') }}" 
+                       class="btn {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        All Orders
+                    </a>
+                    <a href="{{ url_for('customer_orders') }}?status=pending" 
+                       class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Pending
+                    </a>
+                    <a href="{{ url_for('customer_orders') }}?status=preparing" 
+                       class="btn {% if status_filter == 'preparing' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Preparing
+                    </a>
+                    <a href="{{ url_for('customer_orders') }}?status=on_the_way" 
+                       class="btn {% if status_filter == 'on_the_way' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        On the Way
+                    </a>
+                    <a href="{{ url_for('customer_orders') }}?status=delivered" 
+                       class="btn {% if status_filter == 'delivered' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Delivered
+                    </a>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Price</th>
-                            <th>Quantity</th>
-                            <th>Total</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in seller_data.items %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    {% if item.image %}
-                                    <img src="{{ url_for('static', filename=item.image) }}" 
-                                         class="img-thumbnail me-3" style="width: 60px; height: 60px;" 
-                                         alt="{{ item.name }}">
-                                    {% endif %}
-                                    <div>
-                                        <h6 class="mb-0">{{ item.name }}</h6>
-                                        <small class="text-muted">
-                                            <span class="veg-indicator {% if item.is_vegetarian %}veg{% else %}nonveg{% endif %}"></span>
-                                            {{ 'Vegetarian' if item.is_vegetarian else 'Non-Vegetarian' }}
-                                        </small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                ₹{{ item.discount_price or item.price }}
-                                {% if item.discount_price %}
-                                <br><small class="text-muted"><s>₹{{ item.price }}</s></small>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="input-group" style="width: 120px;">
-                                    <button class="btn btn-outline-secondary btn-sm" 
-                                            onclick="updateCartItem({{ item.id }}, {{ item.quantity - 1 }})">
-                                        <i class="fas fa-minus"></i>
-                                    </button>
-                                    <input type="text" class="form-control form-control-sm text-center" 
-                                           value="{{ item.quantity }}" readonly>
-                                    <button class="btn btn-outline-secondary btn-sm" 
-                                            onclick="updateCartItem({{ item.id }}, {{ item.quantity + 1 }})">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </td>
-                            <td>
-                                ₹{{ (item.discount_price or item.price) * item.quantity }}
-                            </td>
-                            <td>
-                                <button class="btn btn-danger btn-sm" 
-                                        onclick="updateCartItem({{ item.id }}, 0)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                            <td colspan="2"><strong>₹{{ seller_data.subtotal }}</strong></td>
-                        </tr>
-                    </tfoot>
-                </table>
+    </div>
+</div>
+
+{% if orders %}
+<div class="row">
+    {% for order in orders %}
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="card-title mb-1">{{ order.restaurant_name }}</h5>
+                        <p class="text-muted mb-0">Order #{{ order.order_number }}</p>
+                        <small class="text-muted">{{ order.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+                    </div>
+                    <span class="badge status-{{ order.order_status | replace(' ', '_') }}">
+                        {{ order.order_status|title }}
+                    </span>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="mb-1"><strong>Delivery Address:</strong></p>
+                    <p class="text-muted small mb-2">{{ order.delivery_address|truncate(100) }}</p>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <p class="mb-0 text-muted">Total Amount</p>
+                        <h5 class="mb-0">₹{{ order.final_amount }}</h5>
+                    </div>
+                    <div class="col-6">
+                        <p class="mb-0 text-muted">Payment</p>
+                        <h6 class="mb-0">{{ order.payment_method|replace('_', ' ')|title }}</h6>
+                    </div>
+                </div>
+                
+                {% if order.delivery_agent_name %}
+                <div class="alert alert-info mb-3 py-2">
+                    <small>
+                        <i class="fas fa-motorcycle"></i> 
+                        Delivery Agent: {{ order.delivery_agent_name }}
+                    </small>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid">
+                    <a href="{{ url_for('customer_order_detail', order_id=order.id) }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                </div>
             </div>
         </div>
     </div>
     {% endfor %}
-    
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-truck"></i> Delivery Details</h5>
-                </div>
-                <div class="card-body">
-                    <form id="checkoutForm" method="POST" action="{{ url_for('checkout') }}">
-                        <div class="mb-3">
-                            <label for="delivery_address" class="form-label">Delivery Address *</label>
-                            <textarea class="form-control" id="delivery_address" name="delivery_address" 
-                                      rows="3" required placeholder="Enter your complete delivery address"></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="special_instructions" class="form-label">Special Instructions</label>
-                            <textarea class="form-control" id="special_instructions" name="special_instructions" 
-                                      rows="2" placeholder="Any special instructions for the restaurant or delivery agent"></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="payment_method" class="form-label">Payment Method *</label>
-                            <select class="form-control" id="payment_method" name="payment_method" required>
-                                <option value="cash_on_delivery">Cash on Delivery</option>
-                                <option value="online_payment">Online Payment</option>
-                            </select>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-receipt"></i> Order Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <span>₹{{ total_amount }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Delivery Charge:</span>
-                        <span>₹30.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Tax (5%):</span>
-                        <span>₹{{ "%.2f"|format(total_amount * 0.05) }}</span>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-3">
-                        <strong>Total:</strong>
-                        <strong>₹{{ "%.2f"|format(total_amount + 30 + (total_amount * 0.05)) }}</strong>
-                    </div>
-                    
-                    <button type="submit" form="checkoutForm" class="btn btn-success btn-lg w-100">
-                        <i class="fas fa-check-circle"></i> Place Order
-                    </button>
-                    
-                    <div class="text-center mt-3">
-                        <a href="{{ url_for('customer_restaurants') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-plus"></i> Add More Items
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
 {% else %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <div class="mb-3" style="font-size: 4rem; color: #ddd;">
-                <i class="fas fa-shopping-cart"></i>
-            </div>
-            <h4>Your cart is empty</h4>
-            <p class="text-muted">Add delicious Tamil food items to your cart</p>
-            <a href="{{ url_for('customer_restaurants') }}" class="btn btn-primary">
-                <i class="fas fa-store"></i> Browse Restaurants
-            </a>
+<div class="card">
+    <div class="card-body text-center py-5">
+        <div class="mb-3" style="font-size: 4rem; color: #ddd;">
+            <i class="fas fa-clipboard-list"></i>
         </div>
+        <h4>No orders found</h4>
+        <p class="text-muted">
+            {% if status_filter %}
+                No {{ status_filter }} orders
+            {% else %}
+                You haven't placed any orders yet
+            {% endif %}
+        </p>
+        <a href="{{ url_for('customer_restaurants') }}" class="btn btn-primary">
+            <i class="fas fa-store"></i> Order Now
+        </a>
     </div>
+</div>
 {% endif %}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function updateCartItem(cartId, quantity) {
-    if(quantity === 0) {
-        if(confirm('Remove this item from cart?')) {
-            submitCartUpdate(cartId, 0);
-        }
-    } else {
-        submitCartUpdate(cartId, quantity);
-    }
-}
-
-function submitCartUpdate(cartId, quantity) {
-    $.ajax({
-        url: '/customer/update_cart',
-        method: 'POST',
-        data: {
-            cart_id: cartId,
-            quantity: quantity
-        },
-        success: function(response) {
-            location.reload();
-        }
-    });
-}
-</script>
 {% endblock %}

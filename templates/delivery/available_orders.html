@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Available Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Available Orders</h2>
+    
+    {% if orders %}
+    <div class="row">
+        {% for order in orders %}
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Order #{{ order.order_number }}</strong>
+                    <span class="badge bg-success float-end">₹{{ order.delivery_commission or 0 }}</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Restaurant:</strong> {{ order.restaurant_name }}</p>
+                    <p><strong>Address:</strong> {{ order.restaurant_address }}</p>
+                    <p><strong>Customer:</strong> {{ order.customer_name }}</p>
+                    <p><strong>Delivery To:</strong> {{ order.customer_address }}</p>
+                    
+                    {% if order.distance %}
+                    <p><strong>Distance:</strong> {{ order.distance }} km</p>
+                    <p><strong>Est. Time:</strong> {{ order.estimated_time }} minutes</p>
+                    {% endif %}
+                    
+                    <p><strong>Order Amount:</strong> ₹{{ order.final_amount }}</p>
+                    
+                    <div class="d-grid">
+                        <button class="btn btn-primary" onclick="acceptOrder({{ order.id }})">
+                            Accept Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No available orders at the moment.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function acceptOrder(orderId) {
+    if (confirm('Accept this delivery order?')) {
+        fetch(`/delivery/accept_order/${orderId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                window.location.href = "/delivery/dashboard";
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+}
+
+// Auto-refresh every 30 seconds
+setTimeout(() => {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}
