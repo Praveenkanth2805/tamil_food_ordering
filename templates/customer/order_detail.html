@@ -69,56 +69,65 @@
             </div>
             <div class="card-body">
                 <div class="tracking-steps">
-                    <div class="step {% if 'pending' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'pending' %}active{% endif %}">
+                    <div class="step 
+{% if tracking | selectattr('status','equalto','pending') | list | length > 0 %}completed{% endif %}
+{% if order.order_status == 'pending' %}active{% endif %}">
+
                         <div class="step-circle">
                             <i class="fas fa-shopping-cart"></i>
                         </div>
                         <small>Order Placed</small>
                     </div>
                     
-                    <div class="step {% if 'confirmed' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'confirmed' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','confirmed') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'confirmed' %}active{% endif %}">
+
                         <div class="step-circle">
                             <i class="fas fa-check"></i>
                         </div>
                         <small>Confirmed</small>
                     </div>
                     
-                    <div class="step {% if 'preparing' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'preparing' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','preparing') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'preparing' %}active{% endif %}">
                         <div class="step-circle">
                             <i class="fas fa-utensils"></i>
                         </div>
                         <small>Preparing</small>
                     </div>
                     
-                    <div class="step {% if 'ready' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'ready' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','ready') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'ready' %}active{% endif %}">
                         <div class="step-circle">
                             <i class="fas fa-box"></i>
                         </div>
                         <small>Ready</small>
                     </div>
                     
-                    <div class="step {% if 'picked_up' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'picked_up' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','picked_up') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'picked_up' %}active{% endif %}">
                         <div class="step-circle">
                             <i class="fas fa-motorcycle"></i>
                         </div>
                         <small>Picked Up</small>
                     </div>
                     
-                    <div class="step {% if 'on_the_way' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'on_the_way' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','on_the_way') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'on_the_way' %}active{% endif %}">
                         <div class="step-circle">
                             <i class="fas fa-road"></i>
                         </div>
                         <small>On the Way</small>
                     </div>
                     
-                    <div class="step {% if 'delivered' in [t.status for t in tracking] %}completed{% endif %} 
-                                {% if order.order_status == 'delivered' %}active{% endif %}">
+                    <div class="step 
+    {% if tracking | selectattr('status','equalto','delivered') | list | length > 0 %}completed{% endif %}
+    {% if order.order_status == 'delivered' %}active{% endif %}">
                         <div class="step-circle">
                             <i class="fas fa-home"></i>
                         </div>
