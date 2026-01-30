@@ -11,11 +11,11 @@
 </div>
 
 {% if cart_by_seller %}
-    {% for seller_id, seller_data in cart_by_seller.items() %}
+    {% for seller_id, seller_info in cart_by_seller.items() %}
     <div class="card mb-4">
         <div class="card-header bg-light">
             <h5 class="mb-0">
-                <i class="fas fa-store"></i> {{ seller_data.restaurant_name }}
+                <i class="fas fa-store"></i> {{ seller_info.restaurant_name }}
             </h5>
         </div>
         <div class="card-body">
@@ -31,12 +31,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in seller_data.items %}
+                        {% for item in seller_info['items'] %}
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center">
                                     {% if item.image %}
-                                    <img src="{{ url_for('static', filename=item.image) }}" 
+                                    <img src="{{ url_for('static', filename=item.image) if item.image.startswith('uploads/') else item.image }}" 
                                          class="img-thumbnail me-3" style="width: 60px; height: 60px;" 
                                          alt="{{ item.name }}">
                                     {% endif %}
@@ -84,7 +84,7 @@
                     <tfoot>
                         <tr>
                             <td colspan="3" class="text-end"><strong>Subtotal:</strong></td>
-                            <td colspan="2"><strong>₹{{ seller_data.subtotal }}</strong></td>
+                            <td colspan="2"><strong>₹{{ seller_info.subtotal }}</strong></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -133,7 +133,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span>Subtotal:</span>
-                        <span>₹{{ total_amount }}</span>
+                        <span>₹{{ "%.2f"|format(total_amount) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Delivery Charge:</span>
@@ -141,12 +141,12 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Tax (5%):</span>
-                        <span>₹{{ "%.2f"|format(total_amount * 0.05) }}</span>
+                        <span>₹{{ "%.2f"|format(tax) }}</span>
                     </div>
                     <hr>
                     <div class="d-flex justify-content-between mb-3">
                         <strong>Total:</strong>
-                        <strong>₹{{ "%.2f"|format(total_amount + 30 + (total_amount * 0.05)) }}</strong>
+                        <strong>₹{{ "%.2f"|format(grand_total) }}</strong>
                     </div>
                     
                     <button type="submit" form="checkoutForm" class="btn btn-success btn-lg w-100">

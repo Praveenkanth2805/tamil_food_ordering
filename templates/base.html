@@ -8,6 +8,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- KEEP ONLY ONE FAVICON -->
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -32,7 +34,7 @@
                         </a>
                     </li>
                     {% endif %}
-                    
+
                     {% if 'user_id' in session %}
                     <li class="nav-item">
                         <span class="nav-link">வணக்கம், {{ session.full_name }}!</span>
@@ -139,36 +141,6 @@
     </main>
 
     <!-- Footer -->
-    <!--footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5>தமிழ் உணவு</h5>
-                    <p>Authentic Tamil Nadu cuisine delivered to your doorstep</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Quick Links</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="{{ url_for('index') }}">Home</a></li>
-                        {% if 'user_id' not in session %}
-                            <li><a href="{{ url_for('login') }}">Login</a></li>
-                            <li><a href="{{ url_for('register') }}">Register</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h5>Contact Us</h5>
-                    <p><i class="fas fa-phone"></i> +91 9876543210</p>
-                    <p><i class="fas fa-envelope"></i> support@tamilfood.com</p>
-                </div>
-            </div>
-            <hr class="bg-light">
-            <div class="text-center">
-                <p>&copy; 2024 Tamil Food Ordering System. All rights reserved.</p>
-            </div>
-        </div>
-    </footer-->
-
     <footer class="footer">
         <div class="container">
             <div class="row">
@@ -176,8 +148,7 @@
                     <h5>தமிழ் உணவு</h5>
                     <p>Authentic Tamil Nadu cuisine delivered to your doorstep</p>
                     <p><i class="fab fa-github"></i> <a href="https://github.com/Praveenkanth2805"
-                            target="_blank">GitHub
-                            Profile</a></p>
+                            target="_blank">GitHub Profile</a></p>
                     <p><i class="fas fa-code"></i> Developed with ❤️ using AI assistance</p>
                 </div>
 
@@ -189,11 +160,6 @@
                         <li><a href="{{ url_for('login') }}"><i class="fas fa-sign-in-alt"></i> Login</a></li>
                         <li><a href="{{ url_for('register') }}"><i class="fas fa-user-plus"></i> Register</a></li>
                         {% endif %}
-                        <!--
-                        <li><a href="#"><i class="fas fa-question-circle"></i> Help Center</a></li>
-                        <li><a href="#"><i class="fas fa-file-alt"></i> Terms & Conditions</a></li>
-                        <li><a href="#"><i class="fas fa-shield-alt"></i> Privacy Policy</a></li>
-                        -->
                     </ul>
                 </div>
 
@@ -226,9 +192,9 @@
         </div>
     </footer>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts - IMPORTANT: jQuery FIRST, THEN Bootstrap -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>

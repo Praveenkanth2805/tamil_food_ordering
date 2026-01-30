@@ -82,9 +82,16 @@
                                 <td>{{ user.created_at.strftime('%d/%m/%Y') }}</td>
                                 <td>
                                     <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-info" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#viewUserModal{{ user.id }}">
+                                        <button class="btn btn-sm btn-outline-info view-user-btn" 
+                                                data-user-id="{{ user.id }}"
+                                                data-user-name="{{ user.full_name }}"
+                                                data-user-username="{{ user.username }}"
+                                                data-user-email="{{ user.email }}"
+                                                data-user-phone="{{ user.phone }}"
+                                                data-user-type="{{ user.user_type }}"
+                                                data-user-address="{{ user.address or '' }}"
+                                                data-user-status="{{ 'Active' if user.is_active else 'Inactive' }}"
+                                                data-user-registered="{{ user.created_at.strftime('%d %b %Y, %H:%M') }}">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         {% if user.user_type != 'admin' %}
@@ -93,80 +100,6 @@
                                             <i class="fas fa-trash"></i>
                                         </button>
                                         {% endif %}
-                                    </div>
-                                    
-                                    <!-- View User Modal -->
-                                    <div class="modal fade" id="viewUserModal{{ user.id }}" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">User Details</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label text-muted">Full Name</label>
-                                                        <p>{{ user.full_name }}</p>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">Username</label>
-                                                            <p>{{ user.username }}</p>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">User Type</label>
-                                                            <p>
-                                                                <span class="badge bg-{% if user.user_type == 'customer' %}primary{% elif user.user_type == 'seller' %}success{% elif user.user_type == 'delivery' %}warning{% else %}dark{% endif %}">
-                                                                    {{ user.user_type|title }}
-                                                                </span>
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">Email</label>
-                                                            <p>{{ user.email }}</p>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">Phone</label>
-                                                            <p>{{ user.phone }}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label text-muted">Address</label>
-                                                        <p>{{ user.address or 'Not provided' }}</p>
-                                                    </div>
-                                                    <div class="row">
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">Status</label>
-                                                            <p>
-                                                                {% if user.is_active %}
-                                                                <span class="badge bg-success">Active</span>
-                                                                {% else %}
-                                                                <span class="badge bg-danger">Inactive</span>
-                                                                {% endif %}
-                                                            </p>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                            <label class="form-label text-muted">Registered</label>
-                                                            <p>{{ user.created_at.strftime('%d %b %Y, %H:%M') }}</p>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {% if user.user_type == 'seller' %}
-                                                    <div class="alert alert-info">
-                                                        <h6>Restaurant Information</h6>
-                                                        {% set seller_info = [] %}
-                                                        <!-- Seller info would be fetched via AJAX in production -->
-                                                        <p class="mb-0">Click "View Restaurant" in sellers page for details</p>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -193,10 +126,110 @@
         </div>
     </div>
 </div>
+
+<!-- Single Modal for all users (dynamic content) -->
+<div class="modal" id="viewUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Full Name</label>
+                    <p id="modal-full-name"></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Username</label>
+                        <p id="modal-username"></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">User Type</label>
+                        <p id="modal-user-type"></p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Email</label>
+                        <p id="modal-email"></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Phone</label>
+                        <p id="modal-phone"></p>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Address</label>
+                    <p id="modal-address"></p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Status</label>
+                        <p id="modal-status"></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label text-muted">Registered</label>
+                        <p id="modal-registered"></p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info" id="seller-info-alert" style="display: none;">
+                    <h6>Restaurant Information</h6>
+                    <p class="mb-0">Click "View Restaurant" in sellers page for details</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+$(document).ready(function() {
+    // Fix modal blinking - use single modal with dynamic content
+    $('.view-user-btn').click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Get user data from button attributes
+        const userType = $(this).data('user-type');
+        const badgeClass = userType === 'customer' ? 'bg-primary' : 
+                          userType === 'seller' ? 'bg-success' : 
+                          userType === 'delivery' ? 'bg-warning' : 'bg-dark';
+        
+        // Populate modal with user data
+        $('#modal-full-name').text($(this).data('user-name'));
+        $('#modal-username').text($(this).data('user-username'));
+        $('#modal-user-type').html(`<span class="badge ${badgeClass}">${$(this).data('user-type').charAt(0).toUpperCase() + $(this).data('user-type').slice(1)}</span>`);
+        $('#modal-email').text($(this).data('user-email'));
+        $('#modal-phone').text($(this).data('user-phone'));
+        $('#modal-address').text($(this).data('user-address') || 'Not provided');
+        $('#modal-status').html(`<span class="badge ${$(this).data('user-status') === 'Active' ? 'bg-success' : 'bg-danger'}">${$(this).data('user-status')}</span>`);
+        $('#modal-registered').text($(this).data('user-registered'));
+        
+        // Show/hide seller info
+        if(userType === 'seller') {
+            $('#seller-info-alert').show();
+        } else {
+            $('#seller-info-alert').hide();
+        }
+        
+        // Show modal
+        $('#viewUserModal').modal('show');
+    });
+    
+    // Clean up modal on close
+    $('#viewUserModal').on('hidden.bs.modal', function() {
+        $('body').removeClass('modal-open');
+        $('.modal-backdrop').remove();
+    });
+});
+
 function confirmDelete(userId, userName) {
     if(confirm(`Are you sure you want to delete user "${userName}"?\n\nThis action cannot be undone and will delete all associated data.`)) {
         const form = document.createElement('form');

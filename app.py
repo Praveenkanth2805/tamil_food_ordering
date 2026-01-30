@@ -9,6 +9,8 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 import math
 from config import Config
+from decimal import Decimal
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -320,7 +322,7 @@ def view_cart():
     cur = mysql.connection.cursor()
     
     cur.execute("""
-        SELECT c.*, fi.name, fi.price, fi.discount_price, fi.image, 
+        SELECT c.*, fi.name, fi.price, fi.discount_price, fi.image, fi.is_vegetarian,
                s.restaurant_name, s.id as seller_id
         FROM cart c
         JOIN food_items fi ON c.food_item_id = fi.id
@@ -332,7 +334,8 @@ def view_cart():
     
     # Group by seller
     cart_by_seller = {}
-    total_amount = 0
+    total_amount = Decimal("0.00")
+
     
     for item in cart_items:
         seller_id = item['seller_id']
@@ -343,18 +346,27 @@ def view_cart():
                 'subtotal': 0
             }
         
-        price = item['discount_price'] or item['price']
-        item_total = price * item['quantity']
-        
+        price = item['discount_price'] if item['discount_price'] is not None else item['price']
+        item_total = Decimal(str(price)) * item['quantity']
+
+        delivery_charge = Decimal("30.00")
+        tax = total_amount * Decimal("0.05")   # 5% tax
+        grand_total = total_amount + delivery_charge + tax
+
         cart_by_seller[seller_id]['items'].append(item)
         cart_by_seller[seller_id]['subtotal'] += item_total
         total_amount += item_total
     
     cur.close()
     
-    return render_template('customer/cart.html',
-                         cart_by_seller=cart_by_seller,
-                         total_amount=total_amount)
+    return render_template(
+    'customer/cart.html',
+    cart_by_seller=cart_by_seller,
+    total_amount=total_amount,
+    tax=tax,
+    grand_total=grand_total
+)
+
 
 @app.route('/customer/update_cart', methods=['POST'])
 @login_required
@@ -401,11 +413,11 @@ def checkout():
     
     for group in seller_groups:
         seller_id = group['seller_id']
-        subtotal = float(group['subtotal'])
+        subtotal = group['subtotal'] or Decimal("0.00")
         
         # Calculate delivery charge (example: ₹30 per order)
-        delivery_charge = 30.00
-        tax_amount = subtotal * 0.05  # 5% tax
+        delivery_charge = Decimal("30.00")
+        tax_amount = subtotal * Decimal("0.05")
         final_amount = subtotal + delivery_charge + tax_amount
         
         # Create order
@@ -806,7 +818,7 @@ def add_menu_item():
     name = request.form['name']
     description = request.form['description']
     price = float(request.form['price'])
-    discount_price = float(request.form['discount_price']) if request.form.get('discount_price') else None
+    discount_price = Decimal(request.form['discount_price']) if request.form.get('discount_price') else None
     category_id = request.form['category_id'] if request.form.get('category_id') else None
     is_vegetarian = 'is_vegetarian' in request.form
     spice_level = request.form['spice_level']
