@@ -371,14 +371,20 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📞 **Support**
 
-For support, email: support@tamilfoodordering.com
+For support, email: praveenkanth2805@gmail.com
 
 ## 🎯 **Project Status**
 
 **Current Version**: 1.0.0  
 **Status**: Production Ready  
-**Last Updated**: January 2024
+**Last Updated**: January 2026
 
 ---
 
 **Enjoy ordering authentic Tamil Nadu food!** 🍛✨
+
+**Sample Images**
+**Admin Panel**
+**Customer Panel**
+**Seller Panel**
+**Delivery Agent Panel**
